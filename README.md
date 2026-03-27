@@ -1,0 +1,2 @@
+# LGU_Credit_Transfer_Search
+港中深海外交流交换课程转学分查询系统
