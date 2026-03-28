@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const fs = require("fs/promises");
+const fsSync = require("fs");
 const path = require("path");
 const courses = require("./data/courses");
 
@@ -72,16 +73,6 @@ const requireAdmin = (req, res, next) => {
 
 app.get("/api/health", (_, res) => {
   res.json({ ok: true, service: "credit-transfer-backend" });
-});
-
-app.get("/", (_, res) => {
-  res.json({
-    message: "Backend is running",
-    health: "/api/health",
-    courses: "/api/courses",
-    universities: "/api/universities",
-    suggestions: "/api/suggestions"
-  });
 });
 
 app.get("/api/universities", (_, res) => {
@@ -291,6 +282,31 @@ app.delete("/api/courses/:id", requireAdmin, async (req, res) => {
   }
   return res.json(removed);
 });
+
+// 生产构建由根目录 npm run build 复制到 backend/public（与 NODE_ENV 无关，避免 Railway 未注入 production 时不托管前端）
+const distPath = path.join(__dirname, "..", "public");
+const indexHtml = path.join(distPath, "index.html");
+const serveFrontend = fsSync.existsSync(indexHtml);
+
+if (serveFrontend) {
+  app.use(express.static(distPath));
+  app.get("*", (req, res) => {
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    res.sendFile(indexHtml);
+  });
+} else {
+  app.get("/", (_, res) => {
+    res.json({
+      message: "Backend is running",
+      health: "/api/health",
+      courses: "/api/courses",
+      universities: "/api/universities",
+      suggestions: "/api/suggestions"
+    });
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Backend running at http://localhost:${PORT}`);

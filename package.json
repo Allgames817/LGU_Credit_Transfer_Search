@@ -12,7 +12,7 @@
     "dev": "npm run clean:port4000 && npm run clean:port5173 && concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build",
+    "build": "npm --prefix frontend run build && node scripts/copy-frontend-to-backend-public.js",
     "start": "npm --prefix backend run start",
     "start:prod": "npm run build && cross-env NODE_ENV=production npm --prefix backend run start"
   },
