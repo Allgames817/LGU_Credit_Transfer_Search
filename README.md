@@ -60,50 +60,6 @@ npm run dev
 
 > PowerShell 若拦截 `npm.ps1`，安装依赖与启动可改用：`npm.cmd run install:all`、`npm.cmd run dev`。
 
-## Railway 部署与用户建议持久化
-
-仓库根目录的 `railway.toml` 已配置构建与启动命令。要让 **用户建议**（`/feedback` → `suggestions.json`）在 **重新部署 / 重启** 后仍保留，需要为该服务挂载 **Volume**，后端会自动使用 Railway 提供的环境变量 **`RAILWAY_VOLUME_MOUNT_PATH`**（无需手写该变量）。
-
-### 操作步骤（Railway 控制台）
-
-1. 打开你的 **Project**，点选部署本应用的 **Service**。
-2. 在画布上 **右键** 或使用 **⌘K / Ctrl+K** 命令面板，选择 **New Volume**（或 **Add Volume**），把 Volume **关联到当前 Service**。
-3. 在 Volume / Service 设置里将 **Mount Path** 设为 **`/data`**（也可自定，见下）。
-4. **Redeploy** 一次服务。启动日志中应出现：  
-   `[suggestions] storage file: /data/suggestions.json (dir from RAILWAY_VOLUME_MOUNT_PATH)`  
-   若仍为 `backend/src/data`，说明当前运行环境未挂载卷或未读到变量。
-5. （可选）在 **Variables** 中手动添加 **`SUGGESTIONS_DATA_DIR`**，值为与挂载路径一致的绝对路径（例如 `/data`）。**若设置此项，将优先于 `RAILWAY_VOLUME_MOUNT_PATH`。**
-6. 若写入卷时报权限错误，可在 Variables 中设置 **`RAILWAY_RUN_UID=0`**（参见 [Railway Volumes](https://docs.railway.com/guides/volumes)）。
-
-### Custom Start Command（重要，易踩坑）
-
-- **`railway.toml` 是仓库里的配置文件**，部署时 Railway 会自动读取，**不要**把整份 `railway.toml` 的内容复制到网页上的 **Custom Start Command** 里。那个输入框只能填 **一条终端命令**，填成多行 TOML 会导致启动异常或仍走默认的 `npm start`。
-- **推荐做法**：在 Service → **Settings** → **Deploy** → **Custom Start Command** 里 **留空（删除全部内容）**，保存后重新部署，这样会使用仓库 `railway.toml` 里的 `startCommand`。
-- 若你必须手写启动命令，**只填一行**，按 **Root Directory** 选择：
-  - **Root Directory 为空**（整个仓库为根，常见）：  
-    `NODE_ENV=production node backend/src/server.js`
-  - **Root Directory 填了 `backend`**：  
-    `NODE_ENV=production node src/server.js`
-- 部署成功后，日志里应出现 **`node …/server.js`**（不经由 `npm run start`），且应有 **`Backend listening on 0.0.0.0:`**（若仍是 `Backend running at http://localhost:`，说明跑的还是旧代码或未拉到最新提交）。
-
-### 环境变量小结
-
-| 变量 | 说明 |
-|------|------|
-| `ADMIN_TOKEN` | 管理员令牌（必填于生产） |
-| `RAILWAY_VOLUME_MOUNT_PATH` | Railway **挂卷后自动注入**，一般无需手动添加 |
-| `SUGGESTIONS_DATA_DIR` | 手动指定建议文件所在**目录**（非文件路径），与挂载路径一致即可；优先级最高 |
-| `RAILWAY_RUN_UID` | 非 root 镜像写卷困难时可设为 `0` |
-
-建议文件最终路径为：**`<上述目录>/suggestions.json`**。
-
-### 若部署显示 Crashed、日志里有 `npm error command failed`
-
-- `npm warn config production` 只是 **npm 提示**，不是业务崩溃原因。
-- 用 **`npm start`** 时，平台在 **重部署 / 换实例** 时会给进程发 **SIGTERM**，npm 常会误报 `command failed`，易被误判为崩溃。本项目 `railway.toml` 已改为 **`node backend/src/server.js`** 直接启动，减少这类噪音。
-- 请确认 Service 的 **Root Directory 为空（仓库根）**；若你填了 `backend`，须把启动命令改成 `NODE_ENV=production node src/server.js`，否则路径会对不上。
-- 后端已监听 **`0.0.0.0`**，便于 Railway 健康检查访问容器内端口。
-
 ## 技术栈
 
 ### 前端
@@ -233,11 +189,9 @@ const UNIVERSITY_REGION = {
 
 ### 建议数据管理
 
-- 默认文件：`backend/src/data/suggestions.json`。生产环境可设置 **`SUGGESTIONS_DATA_DIR`**，或在 Railway 挂载 Volume 后使用自动注入的 **`RAILWAY_VOLUME_MOUNT_PATH`**（详见上文「Railway 部署与用户建议持久化」）；实际路径以启动日志 `[suggestions] storage file: ...` 为准。
-- 后端对建议采用**串行写入**与**原子保存**（临时文件再替换），多人同时提交不易丢数据；`id` 为递增数字。
-- 管理方式：
-  1. 网页（推荐）：`/admin/suggestions`，令牌登录后可筛选、删除、导出 CSV
-  2. 手动清空：将 `suggestions.json` 内容改为 `[]` 并保存
+- **文件路径**：默认 `backend/src/data/suggestions.json`；若设置环境变量 **`SUGGESTIONS_DATA_DIR`** 或 **`RAILWAY_VOLUME_MOUNT_PATH`**（部分云平台挂卷时注入），则在该目录下读写 `suggestions.json`。实际路径以启动日志 **`[suggestions] storage file: ...`** 为准。
+- **写入方式**：串行队列 + 原子写入（临时文件再替换），`id` 递增，减少并发覆盖。
+- **管理**：网页 `/admin/suggestions`（令牌）支持筛选、删除、导出 CSV；或手动将对应 `suggestions.json` 改为 `[]`。
 
 ## 多语言支持
 
