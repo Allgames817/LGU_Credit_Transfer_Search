@@ -75,6 +75,17 @@ npm run dev
 5. （可选）在 **Variables** 中手动添加 **`SUGGESTIONS_DATA_DIR`**，值为与挂载路径一致的绝对路径（例如 `/data`）。**若设置此项，将优先于 `RAILWAY_VOLUME_MOUNT_PATH`。**
 6. 若写入卷时报权限错误，可在 Variables 中设置 **`RAILWAY_RUN_UID=0`**（参见 [Railway Volumes](https://docs.railway.com/guides/volumes)）。
 
+### Custom Start Command（重要，易踩坑）
+
+- **`railway.toml` 是仓库里的配置文件**，部署时 Railway 会自动读取，**不要**把整份 `railway.toml` 的内容复制到网页上的 **Custom Start Command** 里。那个输入框只能填 **一条终端命令**，填成多行 TOML 会导致启动异常或仍走默认的 `npm start`。
+- **推荐做法**：在 Service → **Settings** → **Deploy** → **Custom Start Command** 里 **留空（删除全部内容）**，保存后重新部署，这样会使用仓库 `railway.toml` 里的 `startCommand`。
+- 若你必须手写启动命令，**只填一行**，按 **Root Directory** 选择：
+  - **Root Directory 为空**（整个仓库为根，常见）：  
+    `NODE_ENV=production node backend/src/server.js`
+  - **Root Directory 填了 `backend`**：  
+    `NODE_ENV=production node src/server.js`
+- 部署成功后，日志里应出现 **`node …/server.js`**（不经由 `npm run start`），且应有 **`Backend listening on 0.0.0.0:`**（若仍是 `Backend running at http://localhost:`，说明跑的还是旧代码或未拉到最新提交）。
+
 ### 环境变量小结
 
 | 变量 | 说明 |
