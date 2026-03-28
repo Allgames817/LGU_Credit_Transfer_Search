@@ -1,0 +1,395 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+body.dark-mode {
+  background: #1a1a1a;
+  color: #e5e7eb;
+}
+
+body.dark-mode .container {
+  color: #e5e7eb;
+}
+
+body.dark-mode .header p {
+  color: #9ca3af;
+}
+
+body.dark-mode .filters input,
+body.dark-mode .filters select {
+  background: #2d2d2d;
+  border-color: #404040;
+  color: #e5e7eb;
+}
+
+body.dark-mode .tableWrap {
+  background: #2d2d2d;
+  border-color: #404040;
+}
+
+body.dark-mode th {
+  background: #252525;
+  color: #e5e7eb;
+}
+
+body.dark-mode td {
+  border-color: #404040;
+}
+
+body.dark-mode .feedbackCard {
+  background: #2d2d2d;
+  border-color: #404040;
+}
+
+body.dark-mode .feedbackForm input,
+body.dark-mode .feedbackForm textarea {
+  background: #252525;
+  border-color: #404040;
+  color: #e5e7eb;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  position: relative;
+}
+
+.topControls {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.iconBtn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.iconBtn:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+body.dark-mode .iconBtn {
+  background: #2d2d2d;
+  border-color: #404040;
+  color: #e5e7eb;
+}
+
+body.dark-mode .iconBtn:hover {
+  background: #3a3a3a;
+}
+
+.header h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.header p {
+  margin: 0 0 20px;
+  color: #4b5563;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.jumpFeedbackBtn {
+  border: 1px solid #111827;
+  background: #111827;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.githubBtn {
+  border: 1px solid #6366f1;
+  background: #6366f1;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.githubBtn:hover {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 0.85fr 1.35fr 1fr 0.75fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filters input,
+.filters select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tableWrap {
+  background: #fff;
+  border-radius: 12px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+th,
+td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.tag {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tag.approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tag.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.error {
+  color: #b91c1c;
+  margin: 8px 0 12px;
+}
+
+.success {
+  color: #166534;
+  margin: 8px 0 12px;
+}
+
+.feedbackCard {
+  margin-top: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+}
+
+.feedbackCard h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.feedbackForm {
+  display: grid;
+  gap: 10px;
+}
+
+.feedbackForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.feedbackForm input,
+.feedbackForm textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.feedbackForm button {
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topNav {
+  display: flex;
+  gap: 12px;
+  padding: 14px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.topNav button {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #111827;
+}
+
+.topNav button.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+.adminCard {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.adminTitle {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.adminForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.adminForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.adminForm input,
+.adminForm select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.adminFormActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.adminForm button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.adminForm button.secondary {
+  background: #ffffff;
+  color: #111827;
+}
+
+.adminTable table th,
+.adminTable table td {
+  white-space: nowrap;
+}
+
+.adminTable button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-right: 8px;
+  border: 1px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.adminTable button.secondary {
+  background: #ffffff;
+  color: #111827;
+}
+
+.adminTable button.danger {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+@media (max-width: 1100px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .adminForm {
+    grid-template-columns: 1fr;
+  }
+}
