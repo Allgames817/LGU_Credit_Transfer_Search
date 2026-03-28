@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { API_BASE } from "./apiBase";
 import { REGION_OPTIONS, filterUniversitiesByRegion } from "./universityRegions";
+import { translations } from "./translations";
 
 function Query() {
   const [universities, setUniversities] = useState([]);
@@ -10,6 +11,8 @@ function Query() {
   const [error, setError] = useState("");
   /** 仅用于缩小合作院校下拉框，不参与 API 查询 */
   const [region, setRegion] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
+  const [language, setLanguage] = useState("zh");
 
   const [filters, setFilters] = useState({
     university: "",
@@ -55,7 +58,7 @@ function Query() {
       const data = await res.json();
       setRows(data.data || []);
     } catch (e) {
-      setError("无法连接后端服务，请先启动 backend。");
+      setError(translations[language].error);
     } finally {
       setLoading(false);
     }
@@ -69,6 +72,22 @@ function Query() {
     loadCourses();
   }, [queryString]);
 
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  const toggleLanguage = () => {
+    setLanguage(language === "zh" ? "en" : "zh");
+  };
+
   const onChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -77,14 +96,31 @@ function Query() {
     window.location.href = "/feedback";
   };
 
+  const goToGithub = () => {
+    window.open("https://github.com/Allgames817/LGU_Credit_Transfer_Search", "_blank");
+  };
+
+  const t = translations[language];
+
   return (
     <div className="container">
+      <div className="topControls">
+        <button type="button" className="iconBtn" onClick={toggleDarkMode} title={darkMode ? t.darkModeTooltip.dark : t.darkModeTooltip.light}>
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+        <button type="button" className="iconBtn" onClick={toggleLanguage} title={t.languageTooltip}>
+          {language === "zh" ? "EN" : "中"}
+        </button>
+      </div>
       <header className="header">
-        <h1>港中深海外交流交换课程转学分查询系统</h1>
-        <p>支持按地区与合作院校、课程关键词、港中深课程代码等检索课程转换关系。</p>
+        <h1>{t.title}</h1>
+        <p>{t.subtitle}</p>
         <div className="headerActions">
           <button type="button" className="jumpFeedbackBtn" onClick={goToFeedbackPage}>
-            我要提建议
+            {t.feedbackBtn}
+          </button>
+          <button type="button" className="githubBtn" onClick={goToGithub}>
+            GitHub
           </button>
         </div>
       </header>
@@ -93,7 +129,7 @@ function Query() {
         <select value={region} onChange={(e) => setRegion(e.target.value)}>
           {REGION_OPTIONS.map((r) => (
             <option key={r.id || "all"} value={r.id}>
-              {r.label}
+              {r.label[language]}
             </option>
           ))}
         </select>
@@ -102,7 +138,7 @@ function Query() {
           value={filters.university}
           onChange={(e) => onChange("university", e.target.value)}
         >
-          <option value="">全部合作院校</option>
+          <option value="">{t.allUniversities}</option>
           {universitiesInRegion.map((u) => (
             <option key={u} value={u}>
               {u}
@@ -111,13 +147,13 @@ function Query() {
         </select>
 
         <input
-          placeholder="关键词（课程名/代码）"
+          placeholder={t.keywordPlaceholder}
           value={filters.keyword}
           onChange={(e) => onChange("keyword", e.target.value)}
         />
 
         <select value={filters.faculty} onChange={(e) => onChange("faculty", e.target.value)}>
-          <option value="">全部归属学院</option>
+          <option value="">{t.allFaculties}</option>
           <option value="SDS">SDS</option>
           <option value="SSE">SSE</option>
           <option value="SME">SME</option>
@@ -125,7 +161,7 @@ function Query() {
         </select>
 
         <input
-          placeholder="港中深课程代码（如 CSC1001）"
+          placeholder={t.cuhkszCodePlaceholder}
           value={filters.cuhkszCourseCode}
           onChange={(e) => onChange("cuhkszCourseCode", e.target.value)}
         />
@@ -133,23 +169,23 @@ function Query() {
 
       {error && <p className="error">{error}</p>}
       {loading ? (
-        <p>加载中...</p>
+        <p>{t.loading}</p>
       ) : (
         <section className="tableWrap">
           <table>
             <thead>
               <tr>
-                <th>合作院校</th>
-                <th>对方课程</th>
-                <th className="nowrap">归属学院</th>
-                <th>港中深可认定课程</th>
-                <th>状态</th>
+                <th>{t.tableHeaders.partnerUniversity}</th>
+                <th>{t.tableHeaders.partnerCourse}</th>
+                <th className="nowrap">{t.tableHeaders.faculty}</th>
+                <th>{t.tableHeaders.cuhkszCourse}</th>
+                <th>{t.tableHeaders.status}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>暂无匹配结果</td>
+                  <td colSpan={5}>{t.noResults}</td>
                 </tr>
               ) : (
                 rows.map((row) => (

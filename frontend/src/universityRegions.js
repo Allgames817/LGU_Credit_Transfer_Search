@@ -3,12 +3,12 @@
  * 新增院校时请在此补充；未收录的院校在筛选中归入「其他」。
  */
 export const REGION_OPTIONS = [
-  { id: "", label: "全部地区" },
-  { id: "asia", label: "亚洲" },
-  { id: "europe", label: "欧洲" },
-  { id: "americas", label: "美洲" },
-  { id: "oceania", label: "大洋洲" },
-  { id: "other", label: "其他" }
+  { id: "", label: { zh: "全部地区", en: "All Regions" } },
+  { id: "asia", label: { zh: "亚洲", en: "Asia" } },
+  { id: "europe", label: { zh: "欧洲", en: "Europe" } },
+  { id: "americas", label: { zh: "美洲", en: "Americas" } },
+  { id: "oceania", label: { zh: "大洋洲", en: "Oceania" } },
+  { id: "other", label: { zh: "其他", en: "Other" } }
 ];
 
 /** @type {Record<string, 'asia' | 'europe' | 'americas' | 'oceania' | 'other'>} */
