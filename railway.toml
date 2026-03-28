@@ -1,7 +1,6 @@
 # Railway 配置：https://docs.railway.com/guides/config-as-code
 [build]
-# 构建阶段若带 NODE_ENV=production，npm 会省略 devDependencies，导致没有 vite；安装时关闭 production 模式
-buildCommand = "NPM_CONFIG_PRODUCTION=false npm run install:all && npm run build"
+buildCommand = "npm run install:all && npm run build"
 
 [deploy]
 startCommand = "NODE_ENV=production npm --prefix backend run start"
