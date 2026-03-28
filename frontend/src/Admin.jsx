@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { API_BASE } from "./apiBase";
+import { ADMIN_PARTNER_REGION_OPTIONS, getUniversityRegion } from "./universityRegions";
 const TOKEN_KEY = "admin_token";
 
 function emptyForm() {
   return {
     partnerUniversity: "",
+    partnerRegion: "other",
     partnerCourseCode: "",
     partnerCourseName: "",
     partnerCredits: "",
@@ -113,6 +115,7 @@ function Admin() {
       setEditingId(null);
       setForm(emptyForm());
       await loadCourses();
+      await loadUniversities();
     } catch (err) {
       setError(String(err.message || err));
     }
@@ -122,6 +125,7 @@ function Admin() {
     setEditingId(row.id);
     setForm({
       partnerUniversity: row.partnerUniversity || "",
+      partnerRegion: row.partnerRegion || getUniversityRegion(row.partnerUniversity),
       partnerCourseCode: row.partnerCourseCode || "",
       partnerCourseName: row.partnerCourseName || "",
       partnerCredits: row.partnerCredits ?? "",
@@ -223,6 +227,20 @@ function Admin() {
                 <option key={u} value={u} />
               ))}
             </datalist>
+          </label>
+
+          <label>
+            地区
+            <select
+              value={form.partnerRegion}
+              onChange={(e) => onChange("partnerRegion", e.target.value)}
+            >
+              {ADMIN_PARTNER_REGION_OPTIONS.map((r) => (
+                <option key={r.id || "default"} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label>
@@ -334,6 +352,7 @@ function Admin() {
               <tr>
                 <th>ID</th>
                 <th>合作院校</th>
+                <th className="nowrap">地区</th>
                 <th className="nowrap">归属学院</th>
                 <th>对方课程</th>
                 <th>港中深课程</th>
@@ -344,13 +363,19 @@ function Admin() {
             <tbody>
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>暂无数据</td>
+                  <td colSpan={8}>暂无数据</td>
                 </tr>
               ) : (
                 filteredRows.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.partnerUniversity}</td>
+                    <td>
+                      {ADMIN_PARTNER_REGION_OPTIONS.find(
+                        (o) =>
+                          o.id === (row.partnerRegion || getUniversityRegion(row.partnerUniversity))
+                      )?.label ?? "—"}
+                    </td>
                     <td>{row.faculty || "-"}</td>
                     <td>
                       <strong>{row.partnerCourseCode}</strong>

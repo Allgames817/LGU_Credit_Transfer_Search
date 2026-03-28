@@ -6,6 +6,8 @@ import { translations } from "./translations";
 
 function Query() {
   const [universities, setUniversities] = useState([]);
+  /** 课程里显式设置的校名→地区，覆盖 universityRegions 内置表 */
+  const [regionOverrides, setRegionOverrides] = useState({});
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,8 +30,8 @@ function Query() {
   });
 
   const universitiesInRegion = useMemo(
-    () => filterUniversitiesByRegion(universities, region),
-    [universities, region]
+    () => filterUniversitiesByRegion(universities, region, regionOverrides),
+    [universities, region, regionOverrides]
   );
 
   useEffect(() => {
@@ -56,6 +58,18 @@ function Query() {
     }
   };
 
+  const loadUniversityRegions = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/university-regions`);
+      const data = await res.json();
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        setRegionOverrides(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadCourses = async () => {
     setLoading(true);
     setError("");
@@ -72,6 +86,7 @@ function Query() {
 
   useEffect(() => {
     loadUniversities();
+    loadUniversityRegions();
   }, []);
 
   useEffect(() => {

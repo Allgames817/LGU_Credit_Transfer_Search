@@ -1,6 +1,6 @@
 /**
  * 合作院校所属地区（与 backend 课程数据中的 partnerUniversity 英文全称一致）。
- * 新增院校时请在此补充；未收录的院校在筛选中归入「其他」。
+ * 管理员在后台可为课程设置 partnerRegion 写入 courses.js，将覆盖此表；未设置且无内置项时归为「其他」。
  */
 export const REGION_OPTIONS = [
   { id: "", label: { zh: "全部地区", en: "All Regions" } },
@@ -9,6 +9,15 @@ export const REGION_OPTIONS = [
   { id: "americas", label: { zh: "美洲", en: "Americas" } },
   { id: "oceania", label: { zh: "大洋洲", en: "Oceania" } },
   { id: "other", label: { zh: "其他", en: "Other" } }
+];
+
+/** 管理员地区下拉（均会写入课程 partnerRegion） */
+export const ADMIN_PARTNER_REGION_OPTIONS = [
+  { id: "asia", label: "亚洲" },
+  { id: "europe", label: "欧洲" },
+  { id: "americas", label: "美洲" },
+  { id: "oceania", label: "大洋洲" },
+  { id: "other", label: "其他" }
 ];
 
 /** @type {Record<string, 'asia' | 'europe' | 'americas' | 'oceania' | 'other'>} */
@@ -94,12 +103,20 @@ const UNIVERSITY_REGION = {
   "University of New South Wales": "oceania"
 };
 
-export function getUniversityRegion(universityName) {
+const KNOWN_REGION_IDS = new Set(["asia", "europe", "americas", "oceania", "other"]);
+
+/**
+ * @param {string} universityName
+ * @param {Record<string, string>} [overrides] 来自课程数据 partnerRegion（按校名覆盖内置表）
+ */
+export function getUniversityRegion(universityName, overrides) {
   const key = String(universityName || "").trim();
+  const raw = overrides && key ? overrides[key] : "";
+  if (raw && KNOWN_REGION_IDS.has(raw)) return raw;
   return UNIVERSITY_REGION[key] || "other";
 }
 
-export function filterUniversitiesByRegion(universities, regionId) {
+export function filterUniversitiesByRegion(universities, regionId, overrides) {
   if (!regionId) return universities;
-  return universities.filter((u) => getUniversityRegion(u) === regionId);
+  return universities.filter((u) => getUniversityRegion(u, overrides) === regionId);
 }

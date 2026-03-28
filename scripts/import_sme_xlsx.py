@@ -132,8 +132,16 @@ def fmt_course(c: dict) -> str:
         except Exception:
             return 0
 
+    pr = norm_str(c.get("partnerRegion", "")).lower()
+    allowed_regions = {"asia", "europe", "americas", "oceania", "other"}
+
     fields = [
         f"id: {int(c['id'])}",
+    ]
+    if pr in allowed_regions:
+        fields.append(f"partnerRegion: {js_str(pr)}")
+    fields.extend(
+        [
         f"partnerUniversity: {js_str(c.get('partnerUniversity', ''))}",
         f"partnerCourseCode: {js_str(c.get('partnerCourseCode', ''))}",
         f"partnerCourseName: {js_str(c.get('partnerCourseName', ''))}",
@@ -143,7 +151,8 @@ def fmt_course(c: dict) -> str:
         f"cuhkszCredits: {num(c.get('cuhkszCredits', 0))}",
         f"faculty: {js_str(c.get('faculty', ''))}",
         f"status: {js_str(c.get('status', 'pending'))}",
-    ]
+        ]
+    )
     return "  { " + ", ".join(fields) + " }"
 
 

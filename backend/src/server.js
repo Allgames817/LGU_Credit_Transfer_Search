@@ -42,7 +42,18 @@ app.use(express.json());
 
 const normalize = (text) => String(text || "").toLowerCase().trim();
 
+const ALLOWED_PARTNER_REGIONS = new Set(["asia", "europe", "americas", "oceania", "other"]);
+
+function normalizePartnerRegion(value) {
+  const r = normalize(value);
+  if (!r) return "";
+  if (!ALLOWED_PARTNER_REGIONS.has(r)) return null;
+  return r;
+}
+
 const formatCourseForFile = (course) => {
+  const pr = normalizePartnerRegion(course.partnerRegion);
+  const regionOut = pr === null ? "" : pr;
   const fields = [
     `id: ${Number(course.id)}`,
     `partnerUniversity: ${JSON.stringify(String(course.partnerUniversity || ""))}`,
@@ -55,6 +66,9 @@ const formatCourseForFile = (course) => {
     `faculty: ${JSON.stringify(String(course.faculty || ""))}`,
     `status: ${JSON.stringify(String(course.status || "pending"))}`
   ];
+  if (regionOut) {
+    fields.splice(1, 0, `partnerRegion: ${JSON.stringify(regionOut)}`);
+  }
   return `  { ${fields.join(", ")} }`;
 };
 
@@ -128,6 +142,17 @@ app.get("/api/health", (_, res) => {
 app.get("/api/universities", (_, res) => {
   const universities = [...new Set(courses.map((c) => c.partnerUniversity))].sort();
   res.json(universities);
+});
+
+/** 课程里显式设置的 partnerRegion（按校名），供前端地区筛选覆盖内置 universityRegions 表 */
+app.get("/api/university-regions", (_, res) => {
+  const map = {};
+  for (const c of courses) {
+    const u = String(c.partnerUniversity || "").trim();
+    const pr = normalizePartnerRegion(c.partnerRegion);
+    if (u && pr) map[u] = pr;
+  }
+  res.json(map);
 });
 
 app.get("/api/courses", (req, res) => {
@@ -250,6 +275,14 @@ app.post("/api/courses", requireAdmin, async (req, res) => {
     });
   }
 
+  const partnerRegionNorm = normalizePartnerRegion(payload.partnerRegion);
+  if (partnerRegionNorm === null) {
+    return res.status(400).json({
+      message: "Invalid partnerRegion",
+      allowed: [...ALLOWED_PARTNER_REGIONS]
+    });
+  }
+
   const newCourse = {
     id: courses.length + 1,
     partnerUniversity: payload.partnerUniversity,
@@ -260,7 +293,8 @@ app.post("/api/courses", requireAdmin, async (req, res) => {
     cuhkszCourseName: payload.cuhkszCourseName,
     cuhkszCredits: Number(payload.cuhkszCredits || 0),
     faculty: payload.faculty || "",
-    status: payload.status || "pending"
+    status: payload.status || "pending",
+    partnerRegion: partnerRegionNorm
   };
 
   courses.push(newCourse);
@@ -300,6 +334,14 @@ app.put("/api/courses/:id", requireAdmin, async (req, res) => {
     });
   }
 
+  const partnerRegionNorm = normalizePartnerRegion(payload.partnerRegion);
+  if (partnerRegionNorm === null) {
+    return res.status(400).json({
+      message: "Invalid partnerRegion",
+      allowed: [...ALLOWED_PARTNER_REGIONS]
+    });
+  }
+
   const idx = courses.findIndex((c) => c.id === id);
   if (idx === -1) return res.status(404).json({ message: "Course not found" });
 
@@ -313,7 +355,8 @@ app.put("/api/courses/:id", requireAdmin, async (req, res) => {
     cuhkszCourseName: payload.cuhkszCourseName,
     cuhkszCredits: Number(payload.cuhkszCredits || 0),
     faculty: payload.faculty || "",
-    status: payload.status || "pending"
+    status: payload.status || "pending",
+    partnerRegion: partnerRegionNorm
   };
 
   const original = courses[idx];
