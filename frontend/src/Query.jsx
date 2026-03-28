@@ -11,8 +11,14 @@ function Query() {
   const [error, setError] = useState("");
   /** 仅用于缩小合作院校下拉框，不参与 API 查询 */
   const [region, setRegion] = useState("");
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("zh");
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("darkMode");
+    return saved === "true";
+  });
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem("language");
+    return saved || "zh";
+  });
 
   const [filters, setFilters] = useState({
     university: "",
@@ -81,11 +87,15 @@ function Query() {
   }, [darkMode]);
 
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    const newValue = !darkMode;
+    setDarkMode(newValue);
+    localStorage.setItem("darkMode", newValue);
   };
 
   const toggleLanguage = () => {
-    setLanguage(language === "zh" ? "en" : "zh");
+    const newValue = language === "zh" ? "en" : "zh";
+    setLanguage(newValue);
+    localStorage.setItem("language", newValue);
   };
 
   const onChange = (key, value) => {

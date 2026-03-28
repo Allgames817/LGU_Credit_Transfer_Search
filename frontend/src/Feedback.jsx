@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { API_BASE } from "./apiBase";
+import { translations } from "./translations";
 
 function Feedback() {
   const [form, setForm] = useState({
@@ -12,6 +13,36 @@ function Feedback() {
     error: "",
     success: ""
   });
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("darkMode");
+    return saved === "true";
+  });
+  const [language, setLanguage] = useState(() => {
+    const saved = localStorage.getItem("language");
+    return saved || "zh";
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+  }, [darkMode]);
+
+  const toggleDarkMode = () => {
+    const newValue = !darkMode;
+    setDarkMode(newValue);
+    localStorage.setItem("darkMode", newValue);
+  };
+
+  const toggleLanguage = () => {
+    const newValue = language === "zh" ? "en" : "zh";
+    setLanguage(newValue);
+    localStorage.setItem("language", newValue);
+  };
+
+  const t = translations[language];
 
   const submitSuggestion = async (e) => {
     e.preventDefault();
@@ -20,7 +51,7 @@ function Feedback() {
 
     setStatus({ loading: false, error: "", success: "" });
     if (!message) {
-      setStatus({ loading: false, error: "请先输入建议内容。", success: "" });
+      setStatus({ loading: false, error: t.feedback.errorEmpty, success: "" });
       return;
     }
 
@@ -32,10 +63,10 @@ function Feedback() {
         body: JSON.stringify({ name, message })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "提交失败");
+      if (!res.ok) throw new Error(data?.message || t.feedback.errorSubmit);
 
       setForm({ name, message: "" });
-      setStatus({ loading: false, error: "", success: "建议已提交，感谢反馈！" });
+      setStatus({ loading: false, error: "", success: t.feedback.successMessage });
     } catch (err) {
       setStatus({
         loading: false,
@@ -47,12 +78,20 @@ function Feedback() {
 
   return (
     <div className="container">
+      <div className="topControls">
+        <button type="button" className="iconBtn" onClick={toggleDarkMode} title={darkMode ? t.darkModeTooltip.dark : t.darkModeTooltip.light}>
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+        <button type="button" className="iconBtn" onClick={toggleLanguage} title={t.languageTooltip}>
+          {language === "zh" ? "EN" : "中"}
+        </button>
+      </div>
       <header className="header">
-        <h1>意见与建议</h1>
-        <p>欢迎告诉我们你的使用体验、问题和改进建议。</p>
+        <h1>{t.feedback.title}</h1>
+        <p>{t.feedback.subtitle}</p>
         <div className="headerActions">
           <button type="button" className="jumpFeedbackBtn" onClick={() => (window.location.href = "/")}>
-            返回查询页面
+            {t.feedback.backBtn}
           </button>
         </div>
       </header>
@@ -60,15 +99,15 @@ function Feedback() {
       <section className="feedbackCard">
         <form onSubmit={submitSuggestion} className="feedbackForm">
           <label>
-            你的称呼（可选）
+            {t.feedback.nameLabel}
             <input
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="例如：2023级 金融专业同学"
+              placeholder={t.feedback.namePlaceholder}
             />
           </label>
           <label>
-            建议内容
+            {t.feedback.messageLabel}
             <textarea
               value={form.message}
               onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))}
@@ -77,7 +116,7 @@ function Feedback() {
             />
           </label>
           <button type="submit" disabled={status.loading}>
-            {status.loading ? "提交中..." : "提交建议"}
+            {status.loading ? t.feedback.submitting : t.feedback.submitBtn}
           </button>
           {status.error && <p className="error">{status.error}</p>}
           {status.success && <p className="success">{status.success}</p>}

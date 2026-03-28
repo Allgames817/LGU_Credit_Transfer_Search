@@ -22,7 +22,20 @@ export const translations = {
       light: "切换到深色模式",
       dark: "切换到浅色模式"
     },
-    languageTooltip: "切换语言"
+    languageTooltip: "切换语言",
+    feedback: {
+      title: "意见与建议",
+      subtitle: "欢迎告诉我们你的使用体验、问题和改进建议。",
+      backBtn: "返回查询页面",
+      nameLabel: "你的称呼（可选）",
+      namePlaceholder: "例如：2023级 金融专业同学",
+      messageLabel: "建议内容",
+      submitBtn: "提交建议",
+      submitting: "提交中...",
+      errorEmpty: "请先输入建议内容。",
+      errorSubmit: "提交失败",
+      successMessage: "建议已提交，感谢反馈！"
+    }
   },
   en: {
     title: "CUHK-Shenzhen Credit Transfer Search System",
@@ -47,6 +60,19 @@ export const translations = {
       light: "Switch to Dark Mode",
       dark: "Switch to Light Mode"
     },
-    languageTooltip: "Switch Language"
+    languageTooltip: "Switch Language",
+    feedback: {
+      title: "Feedback & Suggestions",
+      subtitle: "Welcome to share your experience, issues, and suggestions for improvement.",
+      backBtn: "Back to Search",
+      nameLabel: "Your Name (Optional)",
+      namePlaceholder: "e.g., Class of 2023 Finance Student",
+      messageLabel: "Your Feedback",
+      submitBtn: "Submit Feedback",
+      submitting: "Submitting...",
+      errorEmpty: "Please enter your feedback.",
+      errorSubmit: "Submission failed",
+      successMessage: "Feedback submitted successfully. Thank you!"
+    }
   }
 };
