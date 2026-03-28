@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API_BASE = "http://localhost:4000/api";
+import { API_BASE } from "./apiBase";
 const TOKEN_KEY = "admin_token";
 
 function AdminSuggestions() {
@@ -170,7 +170,7 @@ function AdminSuggestions() {
 
       <section className="tableWrap adminTable">
         <h2 className="adminTitle">用户建议列表</h2>
-        <div style={{ padding: "0 12px 12px" }}>
+        <div style={{ padding: "0 0 12px" }}>
           <label style={{ marginRight: 8 }}>
             时间范围
             <select value={range} onChange={(e) => setRange(e.target.value)} style={{ marginLeft: 8 }}>
