@@ -69,11 +69,11 @@ npm.cmd run dev
 ## 权限与后台录入
 
 - 前端查询页：`http://localhost:5173/`
-- 前端后台录入页：`http://localhost:5173/admin`
 - 前端用户建议页：`http://localhost:5173/feedback`
+- 前端后台录入页：`http://localhost:5173/admin`
 - 前端管理员建议箱：`http://localhost:5173/admin/suggestions`
 - 后端写操作（新增/编辑/删除）需要管理员令牌。
-- 后端令牌配置：启动后端前设置环境变量 `ADMIN_TOKEN`，默认值为 `dev-admin-token`（不建议用于正式环境）。
+- 后端令牌配置：启动后端前设置环境变量 `ADMIN_TOKEN`，默认值为 `dev-admin-token`。
 
 ## 建议数据管理与清除
 
