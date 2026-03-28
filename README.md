@@ -101,4 +101,8 @@ npm.cmd run dev
   - `cuhkszCredits`
   - `faculty`
   - `status`（`approved` / `pending`）
-# LGU_Credit_Transfer_Search
+
+### 查询页「地区」筛选（维护说明）
+
+- 查询页按**亚洲 / 欧洲 / 美洲 / 大洋洲**等缩小合作院校列表时，依赖 `frontend/src/universityRegions.js` 中的院校全称 → 地区映射。
+- 若在 `courses.js` 里新增了 **`partnerUniversity`（合作院校名称）**，请在该文件中为**完全相同的英文全称**补充一条映射（`asia`、`europe`、`americas`、`oceania`）；未收录的院校会出现在地区 **「其他」** 中。

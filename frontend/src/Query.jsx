@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { API_BASE } from "./apiBase";
+import { REGION_OPTIONS, filterUniversitiesByRegion } from "./universityRegions";
 
 function Query() {
   const [universities, setUniversities] = useState([]);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  /** 仅用于缩小合作院校下拉框，不参与 API 查询 */
+  const [region, setRegion] = useState("");
 
   const [filters, setFilters] = useState({
     university: "",
@@ -14,6 +17,17 @@ function Query() {
     cuhkszCourseCode: "",
     faculty: ""
   });
+
+  const universitiesInRegion = useMemo(
+    () => filterUniversitiesByRegion(universities, region),
+    [universities, region]
+  );
+
+  useEffect(() => {
+    if (filters.university && !universitiesInRegion.includes(filters.university)) {
+      setFilters((prev) => ({ ...prev, university: "" }));
+    }
+  }, [region, universitiesInRegion, filters.university]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -67,7 +81,7 @@ function Query() {
     <div className="container">
       <header className="header">
         <h1>港中深海外交流交换课程转学分查询系统</h1>
-        <p>支持按学校、课程关键词、港中深课程代码和审批状态检索课程转换关系。</p>
+        <p>支持按地区与合作院校、课程关键词、港中深课程代码等检索课程转换关系。</p>
         <div className="headerActions">
           <button type="button" className="jumpFeedbackBtn" onClick={goToFeedbackPage}>
             我要提建议
@@ -76,12 +90,20 @@ function Query() {
       </header>
 
       <section className="filters">
+        <select value={region} onChange={(e) => setRegion(e.target.value)}>
+          {REGION_OPTIONS.map((r) => (
+            <option key={r.id || "all"} value={r.id}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+
         <select
           value={filters.university}
           onChange={(e) => onChange("university", e.target.value)}
         >
           <option value="">全部合作院校</option>
-          {universities.map((u) => (
+          {universitiesInRegion.map((u) => (
             <option key={u} value={u}>
               {u}
             </option>

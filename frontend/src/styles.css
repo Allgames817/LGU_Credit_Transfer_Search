@@ -46,7 +46,7 @@ body {
 
 .filters {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 1fr;
+  grid-template-columns: 0.85fr 1.35fr 1fr 0.75fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -267,6 +267,12 @@ th {
 .adminTable button.danger {
   border-color: #dc2626;
   background: #dc2626;
+}
+
+@media (max-width: 1100px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 900px) {
