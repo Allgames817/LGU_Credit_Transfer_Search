@@ -58,8 +58,6 @@ npm run dev
 - 前端地址：http://localhost:5173
 - 后端地址：http://localhost:4000
 
-> PowerShell 若拦截 `npm.ps1`，安装依赖与启动可改用：`npm.cmd run install:all`、`npm.cmd run dev`。
-
 ## 技术栈
 
 ### 前端
