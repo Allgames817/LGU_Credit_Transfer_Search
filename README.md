@@ -86,6 +86,13 @@ npm run dev
 
 建议文件最终路径为：**`<上述目录>/suggestions.json`**。
 
+### 若部署显示 Crashed、日志里有 `npm error command failed`
+
+- `npm warn config production` 只是 **npm 提示**，不是业务崩溃原因。
+- 用 **`npm start`** 时，平台在 **重部署 / 换实例** 时会给进程发 **SIGTERM**，npm 常会误报 `command failed`，易被误判为崩溃。本项目 `railway.toml` 已改为 **`node backend/src/server.js`** 直接启动，减少这类噪音。
+- 请确认 Service 的 **Root Directory 为空（仓库根）**；若你填了 `backend`，须把启动命令改成 `NODE_ENV=production node src/server.js`，否则路径会对不上。
+- 后端已监听 **`0.0.0.0`**，便于 Railway 健康检查访问容器内端口。
+
 ## 技术栈
 
 ### 前端

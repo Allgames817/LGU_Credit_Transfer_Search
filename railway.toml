@@ -12,6 +12,8 @@
 buildCommand = "npm run install:all && npm run build"
 
 [deploy]
-startCommand = "NODE_ENV=production npm --prefix backend run start"
+# 直接用 node 启动，避免 npm 在收到 SIGTERM/健康检查切换时把正常停机打成 “command failed”
+# 若你在 Railway 里把 Service 的 Root Directory 设成了 backend，请改为：NODE_ENV=production node src/server.js
+startCommand = "NODE_ENV=production node backend/src/server.js"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 300
