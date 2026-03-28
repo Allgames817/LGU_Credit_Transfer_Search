@@ -102,7 +102,9 @@ LGU_Credit_Transfer_Search/
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/universities` | 获取合作院校列表 |
+| GET | `/api/university-regions` | 课程中显式 `partnerRegion` 的校名→地区（供前台筛选） |
 | GET | `/api/courses` | 查询课程（支持多参数筛选） |
+| GET | `/api/courses/:id` | 单条课程 |
 | POST | `/api/suggestions` | 提交用户建议 |
 
 ### 管理员接口（需要令牌）
@@ -154,7 +156,8 @@ export ADMIN_TOKEN=your-secret-token
 
 ### 添加课程数据
 
-编辑 `backend/src/data/courses.js`，添加新的课程映射记录：
+- **推荐**：在 **`/admin`** 录入；保存后会写回 `backend/src/data/courses.js`。可选字段 **`partnerRegion`**（`asia` / `europe` / `americas` / `oceania` / `other`）会一并写入，供前台地区筛选覆盖 `universityRegions.js` 内置表。
+- **手工**：直接编辑 `courses.js`，单条记录示例：
 
 ```javascript
 {

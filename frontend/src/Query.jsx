@@ -4,6 +4,14 @@ import { API_BASE } from "./apiBase";
 import { REGION_OPTIONS, filterUniversitiesByRegion } from "./universityRegions";
 import { translations } from "./translations";
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const PAGE_SIZE_STORAGE_KEY = "queryPageSize";
+
+function readStoredPageSize() {
+  const n = Number(localStorage.getItem(PAGE_SIZE_STORAGE_KEY));
+  return PAGE_SIZE_OPTIONS.includes(n) ? n : 25;
+}
+
 function Query() {
   const [universities, setUniversities] = useState([]);
   /** 课程里显式设置的校名→地区，覆盖 universityRegions 内置表 */
@@ -28,6 +36,9 @@ function Query() {
     cuhkszCourseCode: "",
     faculty: ""
   });
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(readStoredPageSize);
 
   const universitiesInRegion = useMemo(
     () => filterUniversitiesByRegion(universities, region, regionOverrides),
@@ -90,8 +101,33 @@ function Query() {
   }, []);
 
   useEffect(() => {
+    setPage(1);
     loadCourses();
   }, [queryString]);
+
+  const totalCount = rows.length;
+  const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
+  const safePage = totalPages === 0 ? 1 : Math.min(page, totalPages);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  const paginatedRows = useMemo(() => {
+    if (totalCount === 0) return [];
+    const p = totalPages === 0 ? 1 : Math.min(page, totalPages);
+    const start = (p - 1) * pageSize;
+    return rows.slice(start, start + pageSize);
+  }, [rows, page, pageSize, totalCount, totalPages]);
+
+  const rangeFrom = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeTo = totalCount === 0 ? 0 : Math.min(safePage * pageSize, totalCount);
+
+  const onPageSizeChange = (n) => {
+    setPageSize(n);
+    setPage(1);
+    localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(n));
+  };
 
   useEffect(() => {
     if (darkMode) {
@@ -208,12 +244,12 @@ function Query() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {totalCount === 0 ? (
                 <tr>
                   <td colSpan={5}>{t.noResults}</td>
                 </tr>
               ) : (
-                rows.map((row) => (
+                paginatedRows.map((row) => (
                   <tr key={row.id}>
                     <td>{row.partnerUniversity}</td>
                     <td>
@@ -233,6 +269,45 @@ function Query() {
               )}
             </tbody>
           </table>
+          {totalCount > 0 && (
+            <div className="queryPagination" role="navigation" aria-label="Pagination">
+              <span className="queryPaginationSummary">
+                {t.pagination.summary(totalCount, rangeFrom, rangeTo)}
+              </span>
+              <span className="queryPaginationPageOf">{t.pagination.pageOf(safePage, totalPages)}</span>
+              <label className="queryPaginationSize">
+                <span>{t.pagination.pageSize}</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                >
+                  {PAGE_SIZE_OPTIONS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="queryPaginationNav">
+                <button
+                  type="button"
+                  className="paginationBtn"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  {t.pagination.prev}
+                </button>
+                <button
+                  type="button"
+                  className="paginationBtn"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  {t.pagination.next}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

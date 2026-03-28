@@ -10,6 +10,13 @@ export const translations = {
     cuhkszCodePlaceholder: "港中深课程代码（如 CSC1001）",
     loading: "加载中...",
     noResults: "暂无匹配结果",
+    pagination: {
+      summary: (total, from, to) => `共 ${total} 条，显示第 ${from}–${to} 条`,
+      pageOf: (p, totalPages) => `第 ${p} / ${totalPages} 页`,
+      pageSize: "每页",
+      prev: "上一页",
+      next: "下一页"
+    },
     error: "无法连接后端服务，请先启动 backend。",
     tableHeaders: {
       partnerUniversity: "合作院校",
@@ -48,6 +55,13 @@ export const translations = {
     cuhkszCodePlaceholder: "CUHK-SZ Course Code (e.g. CSC1001)",
     loading: "Loading...",
     noResults: "No matching results",
+    pagination: {
+      summary: (total, from, to) => `${total} total · Showing ${from}–${to}`,
+      pageOf: (p, totalPages) => `Page ${p} of ${totalPages}`,
+      pageSize: "Per page",
+      prev: "Previous",
+      next: "Next"
+    },
     error: "Unable to connect to backend service. Please start the backend first.",
     tableHeaders: {
       partnerUniversity: "Partner University",
