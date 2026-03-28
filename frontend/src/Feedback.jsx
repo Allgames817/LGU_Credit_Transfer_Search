@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API_BASE = "http://localhost:4000/api";
+import { API_BASE } from "./apiBase";
 
 function Feedback() {
   const [form, setForm] = useState({
