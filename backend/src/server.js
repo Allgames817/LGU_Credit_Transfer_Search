@@ -9,7 +9,33 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-admin-token";
 const COURSES_FILE_PATH = path.join(__dirname, "data", "courses.js");
-const SUGGESTIONS_FILE_PATH = path.join(__dirname, "data", "suggestions.json");
+/**
+ * 建议文件路径：
+ * - 优先 `SUGGESTIONS_DATA_DIR`（手动指定持久目录）
+ * - 否则若存在 `RAILWAY_VOLUME_MOUNT_PATH`（Railway 挂卷后自动注入），使用该目录
+ * - 否则使用仓库内 backend/src/data/suggestions.json
+ */
+const suggestionsDataRoot = (() => {
+  const manual = String(process.env.SUGGESTIONS_DATA_DIR || "").trim();
+  if (manual) return path.resolve(manual);
+  const railway = String(process.env.RAILWAY_VOLUME_MOUNT_PATH || "").trim();
+  if (railway) return path.resolve(railway);
+  return null;
+})();
+const SUGGESTIONS_FILE_PATH = suggestionsDataRoot
+  ? path.join(suggestionsDataRoot, "suggestions.json")
+  : path.join(__dirname, "data", "suggestions.json");
+
+/** 所有「读-改-写」串行执行，避免并发提交互相覆盖导致丢数据 */
+let suggestionMutationQueue = Promise.resolve();
+
+function enqueueSuggestionMutation(fn) {
+  const run = suggestionMutationQueue.then(() => fn());
+  suggestionMutationQueue = run.catch((e) => {
+    console.error("[suggestions] mutation error", e && e.message ? e.message : e);
+  }).then(() => {});
+  return run;
+}
 
 app.use(cors());
 app.use(express.json());
@@ -44,19 +70,43 @@ module.exports = courses;
 
 const readSuggestionsFromFile = async () => {
   try {
-    const raw = await fs.readFile(SUGGESTIONS_FILE_PATH, "utf8");
+    const raw = (await fs.readFile(SUGGESTIONS_FILE_PATH, "utf8")).replace(/^\uFEFF/, "");
+    if (!String(raw).trim()) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
-    // If file does not exist yet, treat it as empty.
     if (err && err.code === "ENOENT") return [];
+    if (err instanceof SyntaxError) {
+      try {
+        const backup = `${SUGGESTIONS_FILE_PATH}.corrupt-${Date.now()}`;
+        await fs.copyFile(SUGGESTIONS_FILE_PATH, backup);
+        console.error("[suggestions] JSON 损坏，已备份到", backup);
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        await fs.unlink(SUGGESTIONS_FILE_PATH);
+      } catch (_) {
+        /* ignore */
+      }
+      return [];
+    }
     throw err;
   }
 };
 
-const saveSuggestionsToFile = async (suggestions) => {
-  await fs.writeFile(SUGGESTIONS_FILE_PATH, JSON.stringify(suggestions, null, 2), "utf8");
+/** 先写临时文件再 rename，避免写入中途崩溃导致 JSON 截断无法解析 */
+const saveSuggestionsAtomic = async (suggestions) => {
+  const dir = path.dirname(SUGGESTIONS_FILE_PATH);
+  await fs.mkdir(dir, { recursive: true });
+  const data = `${JSON.stringify(suggestions, null, 2)}\n`;
+  const tmp = path.join(dir, `.suggestions.${process.pid}.${Date.now()}.tmp`);
+  await fs.writeFile(tmp, data, "utf8");
+  await fs.rename(tmp, SUGGESTIONS_FILE_PATH);
 };
+
+const nextSuggestionId = (suggestions) =>
+  suggestions.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
 
 const requireAdmin = (req, res, next) => {
   const auth = String(req.headers["authorization"] || "");
@@ -118,17 +168,19 @@ app.post("/api/suggestions", async (req, res) => {
     return res.status(400).json({ message: "Suggestion message is too long" });
   }
 
-  const suggestion = {
-    id: Date.now(),
-    name: name || "匿名用户",
-    message,
-    createdAt: new Date().toISOString()
-  };
-
   try {
-    const suggestions = await readSuggestionsFromFile();
-    suggestions.push(suggestion);
-    await saveSuggestionsToFile(suggestions);
+    const suggestion = await enqueueSuggestionMutation(async () => {
+      const suggestions = await readSuggestionsFromFile();
+      const row = {
+        id: nextSuggestionId(suggestions),
+        name: name || "匿名用户",
+        message,
+        createdAt: new Date().toISOString()
+      };
+      suggestions.push(row);
+      await saveSuggestionsAtomic(suggestions);
+      return row;
+    });
     return res.status(201).json({ ok: true, data: suggestion });
   } catch (err) {
     return res.status(500).json({ message: "Failed to save suggestion" });
@@ -154,11 +206,15 @@ app.delete("/api/suggestions/:id", requireAdmin, async (req, res) => {
   }
 
   try {
-    const suggestions = await readSuggestionsFromFile();
-    const idx = suggestions.findIndex((s) => Number(s.id) === id);
-    if (idx === -1) return res.status(404).json({ message: "Suggestion not found" });
-    const [removed] = suggestions.splice(idx, 1);
-    await saveSuggestionsToFile(suggestions);
+    const removed = await enqueueSuggestionMutation(async () => {
+      const suggestions = await readSuggestionsFromFile();
+      const idx = suggestions.findIndex((s) => Number(s.id) === id);
+      if (idx === -1) return null;
+      const [row] = suggestions.splice(idx, 1);
+      await saveSuggestionsAtomic(suggestions);
+      return row;
+    });
+    if (!removed) return res.status(404).json({ message: "Suggestion not found" });
     return res.json({ ok: true, data: removed });
   } catch (err) {
     return res.status(500).json({ message: "Failed to delete suggestion" });
@@ -167,7 +223,9 @@ app.delete("/api/suggestions/:id", requireAdmin, async (req, res) => {
 
 app.delete("/api/suggestions", requireAdmin, async (_, res) => {
   try {
-    await saveSuggestionsToFile([]);
+    await enqueueSuggestionMutation(async () => {
+      await saveSuggestionsAtomic([]);
+    });
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: "Failed to clear suggestions" });
@@ -310,4 +368,10 @@ if (serveFrontend) {
 
 app.listen(PORT, () => {
   console.log(`Backend running at http://localhost:${PORT}`);
+  console.log(
+    `[suggestions] storage file: ${SUGGESTIONS_FILE_PATH}` +
+      (suggestionsDataRoot
+        ? ` (dir from ${String(process.env.SUGGESTIONS_DATA_DIR || "").trim() ? "SUGGESTIONS_DATA_DIR" : "RAILWAY_VOLUME_MOUNT_PATH"})`
+        : " (bundled backend/src/data)")
+  );
 });

@@ -1,4 +1,13 @@
-# Railway 配置：https://docs.railway.com/guides/config-as-code
+# https://docs.railway.com/guides/config-as-code
+#
+# 用户建议持久化（可选，推荐生产开启）：
+# 1. 在 Railway 项目画布中为「本服务」添加 Volume（Add Volume），挂载路径填 /data。
+# 2. 部署后 Railway 会注入 RAILWAY_VOLUME_MOUNT_PATH=/data；后端会自动把 suggestions.json
+#    写到该目录，重启后建议不丢。
+# 3. 若需自定义目录，可在 Variables 里设置 SUGGESTIONS_DATA_DIR（绝对路径），优先级高于上者。
+# 4. 非 root 镜像写卷失败时，可设 RAILWAY_RUN_UID=0（见 Railway Volume 文档）。
+# 详细步骤见 README「Railway 部署与用户建议持久化」。
+
 [build]
 buildCommand = "npm run install:all && npm run build"
 
