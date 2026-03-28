@@ -1,0 +1,8 @@
+# Railway 配置：https://docs.railway.com/guides/config-as-code
+[build]
+buildCommand = "npm run install:all && npm run build"
+
+[deploy]
+startCommand = "NODE_ENV=production npm --prefix backend run start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 100
