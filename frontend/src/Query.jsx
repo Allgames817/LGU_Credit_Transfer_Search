@@ -6,7 +6,6 @@ import { translations } from "./translations";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const PAGE_SIZE_STORAGE_KEY = "queryPageSize";
-const ANNOUNCEMENT_DISMISSED_KEY = "queryAnnouncementDismissed_v1";
 
 function readStoredPageSize() {
   const n = Number(localStorage.getItem(PAGE_SIZE_STORAGE_KEY));
@@ -30,9 +29,7 @@ function Query() {
     const saved = localStorage.getItem("language");
     return saved || "zh";
   });
-  const [announcementDismissed, setAnnouncementDismissed] = useState(() => {
-    return localStorage.getItem(ANNOUNCEMENT_DISMISSED_KEY) === "true";
-  });
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [announcement, setAnnouncement] = useState(null);
 
   const [filters, setFilters] = useState({
@@ -224,7 +221,6 @@ function Query() {
               className="announcementClose"
               onClick={() => {
                 setAnnouncementDismissed(true);
-                localStorage.setItem(ANNOUNCEMENT_DISMISSED_KEY, "true");
               }}
               aria-label={t.announcement.close}
               title={t.announcement.close}
