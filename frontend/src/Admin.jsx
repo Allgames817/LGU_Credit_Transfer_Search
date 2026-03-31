@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { API_BASE } from "./apiBase";
 import { ADMIN_PARTNER_REGION_OPTIONS, getUniversityRegion } from "./universityRegions";
 const TOKEN_KEY = "admin_token";
+const ADMIN_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const ADMIN_PAGE_SIZE_STORAGE_KEY = "adminCoursesPageSize";
+
+function readStoredAdminPageSize() {
+  const n = Number(localStorage.getItem(ADMIN_PAGE_SIZE_STORAGE_KEY));
+  return ADMIN_PAGE_SIZE_OPTIONS.includes(n) ? n : 25;
+}
 
 function emptyForm() {
   return {
@@ -29,6 +36,8 @@ function Admin() {
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [announcementError, setAnnouncementError] = useState("");
   const [announcementOk, setAnnouncementOk] = useState("");
+  const [tablePage, setTablePage] = useState(1);
+  const [tablePageSize, setTablePageSize] = useState(readStoredAdminPageSize);
 
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
@@ -281,6 +290,29 @@ function Admin() {
     return rows.filter((row) => String(row.faculty || "").trim().toLowerCase() === selectedFaculty);
   }, [rows, filters.faculty]);
 
+  useEffect(() => {
+    setTablePage(1);
+  }, [filters.faculty, rows.length]);
+
+  const tableTotalCount = filteredRows.length;
+  const tableTotalPages = tableTotalCount === 0 ? 0 : Math.ceil(tableTotalCount / tablePageSize);
+  const tableSafePage = tableTotalPages === 0 ? 1 : Math.min(tablePage, tableTotalPages);
+  const tableRangeFrom = tableTotalCount === 0 ? 0 : (tableSafePage - 1) * tablePageSize + 1;
+  const tableRangeTo =
+    tableTotalCount === 0 ? 0 : Math.min(tableSafePage * tablePageSize, tableTotalCount);
+
+  const paginatedRows = useMemo(() => {
+    if (tableTotalCount === 0) return [];
+    const start = (tableSafePage - 1) * tablePageSize;
+    return filteredRows.slice(start, start + tablePageSize);
+  }, [filteredRows, tableSafePage, tablePageSize, tableTotalCount]);
+
+  const onAdminPageSizeChange = (n) => {
+    setTablePageSize(n);
+    setTablePage(1);
+    localStorage.setItem(ADMIN_PAGE_SIZE_STORAGE_KEY, String(n));
+  };
+
   return (
     <div className="container">
       <header className="header">
@@ -532,12 +564,12 @@ function Admin() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.length === 0 ? (
+              {tableTotalCount === 0 ? (
                 <tr>
                   <td colSpan={8}>暂无数据</td>
                 </tr>
               ) : (
-                filteredRows.map((row) => (
+                paginatedRows.map((row) => (
                   <tr key={row.id}>
                     <td>{row.id}</td>
                     <td>{row.partnerUniversity}</td>
@@ -577,6 +609,48 @@ function Admin() {
               )}
             </tbody>
           </table>
+        )}
+
+        {tableTotalCount > 0 && !loading && (
+          <div className="queryPagination" role="navigation" aria-label="Pagination">
+            <span className="queryPaginationSummary">
+              共 {tableTotalCount} 条，显示第 {tableRangeFrom}–{tableRangeTo} 条
+            </span>
+            <span className="queryPaginationPageOf">
+              第 {tableSafePage} / {tableTotalPages} 页
+            </span>
+            <label className="queryPaginationSize">
+              <span>每页</span>
+              <select
+                value={tablePageSize}
+                onChange={(e) => onAdminPageSizeChange(Number(e.target.value))}
+              >
+                {ADMIN_PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="queryPaginationNav">
+              <button
+                type="button"
+                className="paginationBtn"
+                disabled={tableSafePage <= 1}
+                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+              >
+                上一页
+              </button>
+              <button
+                type="button"
+                className="paginationBtn"
+                disabled={tableSafePage >= tableTotalPages}
+                onClick={() => setTablePage((p) => Math.min(tableTotalPages, p + 1))}
+              >
+                下一页
+              </button>
+            </div>
+          </div>
         )}
       </section>
     </div>
