@@ -6,6 +6,7 @@ import { translations } from "./translations";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const PAGE_SIZE_STORAGE_KEY = "queryPageSize";
+const ANNOUNCEMENT_DISMISSED_KEY = "queryAnnouncementDismissed_v1";
 
 function readStoredPageSize() {
   const n = Number(localStorage.getItem(PAGE_SIZE_STORAGE_KEY));
@@ -29,6 +30,10 @@ function Query() {
     const saved = localStorage.getItem("language");
     return saved || "zh";
   });
+  const [announcementDismissed, setAnnouncementDismissed] = useState(() => {
+    return localStorage.getItem(ANNOUNCEMENT_DISMISSED_KEY) === "true";
+  });
+  const [announcement, setAnnouncement] = useState(null);
 
   const [filters, setFilters] = useState({
     university: "",
@@ -81,6 +86,18 @@ function Query() {
     }
   };
 
+  const loadAnnouncement = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/announcement`);
+      const data = await res.json();
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        setAnnouncement(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const loadCourses = async () => {
     setLoading(true);
     setError("");
@@ -98,6 +115,7 @@ function Query() {
   useEffect(() => {
     loadUniversities();
     loadUniversityRegions();
+    loadAnnouncement();
   }, []);
 
   useEffect(() => {
@@ -162,6 +180,13 @@ function Query() {
   };
 
   const t = translations[language];
+  const announcementFromApi =
+    announcement && announcement.enabled !== false ? announcement : null;
+  const announcementI18n = announcementFromApi
+    ? language === "zh"
+      ? announcementFromApi.zh
+      : announcementFromApi.en
+    : null;
 
   return (
     <div className="container">
@@ -185,6 +210,35 @@ function Query() {
           </button>
         </div>
       </header>
+
+      {!announcementDismissed && (announcementI18n || t.announcement) && (
+        <section
+          className="announcement"
+          role="region"
+          aria-label={(announcementI18n || t.announcement).title}
+        >
+          <div className="announcementHeader">
+            <h2 className="announcementTitle">{(announcementI18n || t.announcement).title}</h2>
+            <button
+              type="button"
+              className="announcementClose"
+              onClick={() => {
+                setAnnouncementDismissed(true);
+                localStorage.setItem(ANNOUNCEMENT_DISMISSED_KEY, "true");
+              }}
+              aria-label={t.announcement.close}
+              title={t.announcement.close}
+            >
+              ×
+            </button>
+          </div>
+          <div className="announcementBody">
+            {Array.isArray((announcementI18n || t.announcement).body)
+              ? (announcementI18n || t.announcement).body.map((line, idx) => <p key={idx}>{line}</p>)
+              : null}
+          </div>
+        </section>
+      )}
 
       <section className="filters">
         <select value={region} onChange={(e) => setRegion(e.target.value)}>

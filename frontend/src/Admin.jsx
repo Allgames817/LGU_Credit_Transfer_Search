@@ -25,6 +25,10 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [adminToken, setAdminToken] = useState("");
+  const [announcement, setAnnouncement] = useState(null);
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [announcementError, setAnnouncementError] = useState("");
+  const [announcementOk, setAnnouncementOk] = useState("");
 
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
@@ -57,11 +61,27 @@ function Admin() {
     loadCourses();
   }, []);
 
+  const loadAnnouncement = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/announcement`);
+      const data = await res.json();
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        setAnnouncement(data);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     const saved = sessionStorage.getItem(TOKEN_KEY);
     if (saved) {
       setAdminToken(saved);
     }
+  }, []);
+
+  useEffect(() => {
+    loadAnnouncement();
   }, []);
 
   const onChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -174,6 +194,87 @@ function Admin() {
     return `编辑课程映射（ID: ${editingId}）`;
   }, [editingId]);
 
+  const announcementForm = useMemo(() => {
+    if (!announcement) {
+      return {
+        enabled: true,
+        zhTitle: "",
+        zhBody: "",
+        enTitle: "",
+        enBody: "",
+      };
+    }
+    const zhBody = Array.isArray(announcement?.zh?.body) ? announcement.zh.body.join("\n") : "";
+    const enBody = Array.isArray(announcement?.en?.body) ? announcement.en.body.join("\n") : "";
+    return {
+      enabled: announcement.enabled !== false,
+      zhTitle: String(announcement?.zh?.title || ""),
+      zhBody,
+      enTitle: String(announcement?.en?.title || ""),
+      enBody
+    };
+  }, [announcement]);
+
+  const [announcementDraft, setAnnouncementDraft] = useState(announcementForm);
+
+  useEffect(() => {
+    // 当后端加载到公告时，重置草稿
+    setAnnouncementDraft(announcementForm);
+  }, [announcementForm]);
+
+  const saveAnnouncement = async (e) => {
+    e.preventDefault();
+    setAnnouncementError("");
+    setAnnouncementOk("");
+    const token = String(adminToken).trim();
+    if (!token) {
+      setAnnouncementError("请输入管理员令牌。");
+      return;
+    }
+    sessionStorage.setItem(TOKEN_KEY, token);
+    setAnnouncementSaving(true);
+    try {
+      const draft = announcementDraft || announcementForm;
+      const body = {
+        enabled: Boolean(draft.enabled),
+        zh: {
+          title: String(draft.zhTitle || "").trim(),
+          body: String(draft.zhBody || "")
+            .split(/\r?\n/g)
+            .map((s) => s.trim())
+            .filter(Boolean),
+        },
+        en: {
+          title: String(draft.enTitle || "").trim(),
+          body: String(draft.enBody || "")
+            .split(/\r?\n/g)
+            .map((s) => s.trim())
+            .filter(Boolean),
+        }
+      };
+
+      const res = await fetch(`${API_BASE}/announcement`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "保存失败");
+      }
+      const data = await res.json();
+      setAnnouncement(data?.data || body);
+      setAnnouncementOk("公告已保存。");
+    } catch (err) {
+      setAnnouncementError(String(err.message || err));
+    } finally {
+      setAnnouncementSaving(false);
+    }
+  };
+
   const filteredRows = useMemo(() => {
     const selectedFaculty = String(filters.faculty || "").trim().toLowerCase();
     if (!selectedFaculty) return rows;
@@ -208,6 +309,76 @@ function Admin() {
             />
           </label>
         </div>
+      </section>
+
+      <section className="adminCard">
+        <h2 className="adminTitle">公告管理（查询页顶部）</h2>
+        <form className="adminForm" onSubmit={saveAnnouncement}>
+          <label className="spanAll">
+            是否启用
+            <select
+              value={announcementDraft.enabled ? "1" : "0"}
+              onChange={(e) =>
+                setAnnouncementDraft((prev) => ({ ...(prev || announcementForm), enabled: e.target.value === "1" }))
+              }
+            >
+              <option value="1">启用</option>
+              <option value="0">关闭</option>
+            </select>
+          </label>
+
+          <label>
+            中文标题
+            <input
+              value={announcementDraft.zhTitle || ""}
+              onChange={(e) =>
+                setAnnouncementDraft((prev) => ({ ...(prev || announcementForm), zhTitle: e.target.value }))
+              }
+            />
+          </label>
+          <label className="spanAll">
+            中文正文（每行一段）
+            <textarea
+              rows={6}
+              value={announcementDraft.zhBody || ""}
+              onChange={(e) =>
+                setAnnouncementDraft((prev) => ({ ...(prev || announcementForm), zhBody: e.target.value }))
+              }
+            />
+          </label>
+
+          <label>
+            English title
+            <input
+              value={announcementDraft.enTitle || ""}
+              onChange={(e) =>
+                setAnnouncementDraft((prev) => ({ ...(prev || announcementForm), enTitle: e.target.value }))
+              }
+            />
+          </label>
+          <label className="spanAll">
+            English body (one paragraph per line)
+            <textarea
+              rows={5}
+              value={announcementDraft.enBody || ""}
+              onChange={(e) =>
+                setAnnouncementDraft((prev) => ({ ...(prev || announcementForm), enBody: e.target.value }))
+              }
+            />
+          </label>
+
+          {(announcementError || announcementOk) && (
+            <p className={announcementError ? "error" : "success"}>
+              {announcementError || announcementOk}
+            </p>
+          )}
+
+          <div className="adminFormActions">
+            <button type="submit" disabled={announcementSaving || !String(adminToken).trim()}>
+              {announcementSaving ? "保存中..." : "保存公告"}
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="adminCard">

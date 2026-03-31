@@ -23,6 +23,25 @@ body.dark-mode .header p {
   color: #9ca3af;
 }
 
+body.dark-mode .announcement {
+  background: #2d2d2d;
+  border-color: #404040;
+}
+
+body.dark-mode .announcementBody {
+  color: #9ca3af;
+}
+
+body.dark-mode .announcementClose {
+  background: #2d2d2d;
+  border-color: #404040;
+  color: #e5e7eb;
+}
+
+body.dark-mode .announcementClose:hover {
+  background: #363636;
+}
+
 body.dark-mode .filters input,
 body.dark-mode .filters select {
   background: #2d2d2d;
@@ -118,6 +137,57 @@ body.dark-mode .iconBtn:hover {
   display: flex;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.announcement {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0 0 16px;
+}
+
+.announcementHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.announcementTitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.announcementClose {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.announcementClose:hover {
+  background: #f9fafb;
+}
+
+.announcementBody {
+  margin-top: 10px;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.announcementBody p {
+  margin: 0 0 8px;
 }
 
 .jumpFeedbackBtn {
@@ -407,12 +477,23 @@ th {
 }
 
 .adminForm input,
-.adminForm select {
+.adminForm select,
+.adminForm textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   background: #fff;
+}
+
+.adminForm textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.adminForm label.spanAll {
+  grid-column: 1 / -1;
 }
 
 .adminFormActions {

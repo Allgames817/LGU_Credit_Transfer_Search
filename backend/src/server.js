@@ -26,13 +26,26 @@ const SUGGESTIONS_FILE_PATH = suggestionsDataRoot
   ? path.join(suggestionsDataRoot, "suggestions.json")
   : path.join(__dirname, "data", "suggestions.json");
 
+const ANNOUNCEMENT_FILE_PATH = suggestionsDataRoot
+  ? path.join(suggestionsDataRoot, "announcement.json")
+  : path.join(__dirname, "data", "announcement.json");
+
 /** 所有「读-改-写」串行执行，避免并发提交互相覆盖导致丢数据 */
 let suggestionMutationQueue = Promise.resolve();
+let announcementMutationQueue = Promise.resolve();
 
 function enqueueSuggestionMutation(fn) {
   const run = suggestionMutationQueue.then(() => fn());
   suggestionMutationQueue = run.catch((e) => {
     console.error("[suggestions] mutation error", e && e.message ? e.message : e);
+  }).then(() => {});
+  return run;
+}
+
+function enqueueAnnouncementMutation(fn) {
+  const run = announcementMutationQueue.then(() => fn());
+  announcementMutationQueue = run.catch((e) => {
+    console.error("[announcement] mutation error", e && e.message ? e.message : e);
   }).then(() => {});
   return run;
 }
@@ -119,6 +132,80 @@ const saveSuggestionsAtomic = async (suggestions) => {
   await fs.rename(tmp, SUGGESTIONS_FILE_PATH);
 };
 
+const DEFAULT_ANNOUNCEMENT = {
+  enabled: true,
+  zh: {
+    title: "公告：海外交流交换转学分查询网站上线",
+    body: [
+      "正在准备海外交流交换/暑课的同学看过来！！！",
+      "你们是否遇到过“如何确认外方院校的课程在港中深能够对应转换为哪些课程”这样的难题？翻查 course description、比对 syllabus、反复与学院、教务处及 OAL 沟通确认，是许多同学在交换前后都经历过的繁琐流程。",
+      "针对这一需求，我们搭建了一个课程对应关系查询网站：",
+      "该网站的数据来源于 SSE、SDS、SME 三个学院的教务处转学分记录文件，将往届同学成功转换学分的课程对应案例进行系统整理，形成可检索的数据库。在交换前直接检索对方院校及课程名称，即可查看该门课程在港中深过往被认定为何种课程、归属哪个学分类别，为选课提供参考依据。",
+      "目前数据主要覆盖 SSE、SDS、SME 三个学院，GE（通识课程）部分暂时仅收录与香港中文大学暑课相关的对应案例。需要说明的是，网站数据基于学院过往转学分记录整理，仅供参考，最终学分认定结果请以所在学院及 OAL 的审批为准。如有不确定或网站中未收录的课程，建议通过邮件向教务处进行具体确认。",
+      "交换期间选课时有据可依，交换回校提交转学分申请时也可参照网站中的成功案例，有助于减少与教务部门之间的沟通成本。若你已有经过验证的课程对应关系，也非常欢迎大家在网站中补充提交，帮助后续同学少走弯路。",
+      "希望能为每一位参与海外交流交换的同学，在项目选择与课程规划上提供一份切实可行的参考！"
+    ],
+  },
+  en: {
+    title: "Announcement: Credit Transfer Search is Live",
+    body: [
+      "Data on this site is compiled from historical credit transfer records maintained by the Academic Affairs Offices of SSE, SDS, and SME. We systematically organize successful credit transfer cases from previous cohorts into a searchable database. Before your exchange, you can search by partner university and course title to see how the course has been recognized at CUHK-Shenzhen in the past and which credit category it falls under, as a reference for course planning.",
+      "At present, the dataset mainly covers SSE, SDS, and SME. For GE (General Education) courses, we currently only include mapping cases related to CUHK summer courses. Please note that the information on this site is organized from past records and is for reference only. Final credit recognition is subject to the approval of your School/Faculty and OAL. If you are unsure or the course is not included on the site, please email the Academic Affairs Office for confirmation.",
+      "During course selection, these records can serve as evidence-based reference; when you return and submit your credit transfer application, you may also refer to successful cases on the site, which can help reduce communication overhead with administrative offices. If you already have verified course mappings, you are welcome to submit them through the website to help future students avoid unnecessary detours.",
+      "We hope this provides a practical and reliable reference for every student participating in overseas exchange—supporting better program choices and course planning."
+    ],
+  }
+};
+
+function sanitizeAnnouncement(input) {
+  const enabled =
+    input && Object.prototype.hasOwnProperty.call(input, "enabled")
+      ? Boolean(input.enabled)
+      : Boolean(DEFAULT_ANNOUNCEMENT.enabled);
+
+  const sanitizeLang = (lang, fallback) => {
+    const title = String(lang?.title || "").trim() || fallback.title;
+    const bodyRaw = Array.isArray(lang?.body) ? lang.body : [];
+    const body = bodyRaw
+      .map((x) => String(x || "").trim())
+      .filter(Boolean)
+      .slice(0, 30);
+    return {
+      title,
+      body: body.length ? body : fallback.body,
+    };
+  };
+
+  return {
+    enabled,
+    zh: sanitizeLang(input?.zh, DEFAULT_ANNOUNCEMENT.zh),
+    en: sanitizeLang(input?.en, DEFAULT_ANNOUNCEMENT.en)
+  };
+}
+
+const readAnnouncementFromFile = async () => {
+  try {
+    const raw = (await fs.readFile(ANNOUNCEMENT_FILE_PATH, "utf8")).replace(/^\uFEFF/, "");
+    if (!String(raw).trim()) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return sanitizeAnnouncement(parsed);
+  } catch (err) {
+    if (err && err.code === "ENOENT") return null;
+    if (err instanceof SyntaxError) return null;
+    throw err;
+  }
+};
+
+const saveAnnouncementAtomic = async (announcement) => {
+  const dir = path.dirname(ANNOUNCEMENT_FILE_PATH);
+  await fs.mkdir(dir, { recursive: true });
+  const data = `${JSON.stringify(announcement, null, 2)}\n`;
+  const tmp = path.join(dir, `.announcement.${process.pid}.${Date.now()}.tmp`);
+  await fs.writeFile(tmp, data, "utf8");
+  await fs.rename(tmp, ANNOUNCEMENT_FILE_PATH);
+};
+
 const nextSuggestionId = (suggestions) =>
   suggestions.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
 
@@ -153,6 +240,25 @@ app.get("/api/university-regions", (_, res) => {
     if (u && pr) map[u] = pr;
   }
   res.json(map);
+});
+
+app.get("/api/announcement", async (_, res) => {
+  try {
+    const saved = await readAnnouncementFromFile();
+    res.json(saved || DEFAULT_ANNOUNCEMENT);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load announcement" });
+  }
+});
+
+app.put("/api/announcement", requireAdmin, async (req, res) => {
+  try {
+    const sanitized = sanitizeAnnouncement(req.body || {});
+    await enqueueAnnouncementMutation(async () => saveAnnouncementAtomic(sanitized));
+    res.json({ ok: true, data: sanitized });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to save announcement" });
+  }
 });
 
 app.get("/api/courses", (req, res) => {
