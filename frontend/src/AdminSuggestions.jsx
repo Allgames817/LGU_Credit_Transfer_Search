@@ -164,7 +164,6 @@ function AdminSuggestions() {
             <input
               value={adminToken}
               onChange={(e) => setAdminToken(e.target.value)}
-              placeholder="例如 dev-admin-token"
             />
           </label>
           <button type="button" onClick={loadSuggestions} disabled={loading}>
