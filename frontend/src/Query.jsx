@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { API_BASE } from "./apiBase";
-import { REGION_OPTIONS, filterUniversitiesByRegion } from "./universityRegions";
+import { REGION_OPTIONS, filterUniversitiesByRegion, getCourseRegion } from "./universityRegions";
 import { translations } from "./translations";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -19,7 +19,7 @@ function Query() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  /** 仅用于缩小合作院校下拉框，不参与 API 查询 */
+  /** 地区：缩小合作院校下拉，并在下方对 API 返回结果再按地区过滤 */
   const [region, setRegion] = useState("");
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("darkMode");
@@ -41,6 +41,7 @@ function Query() {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(readStoredPageSize);
+  const [jumpPage, setJumpPage] = useState("");
 
   const universitiesInRegion = useMemo(
     () => filterUniversitiesByRegion(universities, region, regionOverrides),
@@ -120,7 +121,16 @@ function Query() {
     loadCourses();
   }, [queryString]);
 
-  const totalCount = rows.length;
+  useEffect(() => {
+    setPage(1);
+  }, [region]);
+
+  const rowsInRegion = useMemo(() => {
+    if (!region) return rows;
+    return rows.filter((row) => getCourseRegion(row, regionOverrides) === region);
+  }, [rows, region, regionOverrides]);
+
+  const totalCount = rowsInRegion.length;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
   const safePage = totalPages === 0 ? 1 : Math.min(page, totalPages);
 
@@ -128,12 +138,29 @@ function Query() {
     if (totalPages > 0 && page > totalPages) setPage(totalPages);
   }, [totalPages, page]);
 
+  useEffect(() => {
+    setJumpPage(String(safePage));
+  }, [safePage]);
+
+  const commitJumpPage = () => {
+    if (totalPages <= 0) return;
+    const raw = String(jumpPage || "").trim();
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+      setJumpPage(String(safePage));
+      return;
+    }
+    const next = Math.min(Math.max(1, Math.floor(n)), totalPages);
+    setPage(next);
+    setJumpPage(String(next));
+  };
+
   const paginatedRows = useMemo(() => {
     if (totalCount === 0) return [];
     const p = totalPages === 0 ? 1 : Math.min(page, totalPages);
     const start = (p - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [rows, page, pageSize, totalCount, totalPages]);
+    return rowsInRegion.slice(start, start + pageSize);
+  }, [rowsInRegion, page, pageSize, totalCount, totalPages]);
 
   const rangeFrom = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const rangeTo = totalCount === 0 ? 0 : Math.min(safePage * pageSize, totalCount);
@@ -337,6 +364,24 @@ function Query() {
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="queryPaginationSize" style={{ gap: 6 }}>
+                <span>{language === "zh" ? "跳转" : "Go to"}</span>
+                <input
+                  value={jumpPage}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(e) => setJumpPage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitJumpPage();
+                  }}
+                  onBlur={commitJumpPage}
+                  style={{ width: 90, padding: "6px 10px" }}
+                  aria-label={language === "zh" ? "跳转到页码" : "Go to page"}
+                />
+                <span style={{ opacity: 0.85 }}>
+                  {language === "zh" ? ` / ${totalPages} 页` : ` / ${totalPages}`}
+                </span>
               </label>
               <div className="queryPaginationNav">
                 <button

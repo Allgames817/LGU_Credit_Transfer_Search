@@ -144,8 +144,14 @@ function AdminSuggestions() {
         <h1>管理员建议箱</h1>
         <p>查看用户提交的意见与建议。</p>
         <div className="headerActions">
-          <button type="button" className="jumpFeedbackBtn" onClick={() => (window.location.href = "/admin")}>
-            返回后台录入
+          <button type="button" className="githubBtn" onClick={() => (window.location.href = "/admin/courses")}>
+            课程维护
+          </button>
+          <button type="button" className="githubBtn" onClick={() => (window.location.href = "/admin/announcement")}>
+            公告管理
+          </button>
+          <button type="button" className="jumpFeedbackBtn" onClick={() => (window.location.href = "/admin/suggestions")}>
+            建议箱
           </button>
         </div>
       </header>

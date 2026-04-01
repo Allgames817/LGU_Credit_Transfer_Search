@@ -38,6 +38,21 @@ function Admin() {
   const [announcementOk, setAnnouncementOk] = useState("");
   const [tablePage, setTablePage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(readStoredAdminPageSize);
+  const [jumpTablePage, setJumpTablePage] = useState("");
+
+  const path = window.location.pathname || "/admin";
+  const isAnnouncementPage = path.toLowerCase().startsWith("/admin/announcement");
+  const isCoursesPage = path.toLowerCase().startsWith("/admin/courses") || path.toLowerCase() === "/admin";
+
+  useEffect(() => {
+    if (path.toLowerCase() === "/admin") {
+      try {
+        window.history.replaceState({}, "", "/admin/courses");
+      } catch (_) {
+        // ignore
+      }
+    }
+  }, [path]);
 
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
@@ -313,18 +328,49 @@ function Admin() {
     localStorage.setItem(ADMIN_PAGE_SIZE_STORAGE_KEY, String(n));
   };
 
+  useEffect(() => {
+    setJumpTablePage(String(tableSafePage));
+  }, [tableSafePage]);
+
+  const commitJumpTablePage = () => {
+    if (tableTotalPages <= 0) return;
+    const raw = String(jumpTablePage || "").trim();
+    const n = Number(raw);
+    if (!Number.isFinite(n)) {
+      setJumpTablePage(String(tableSafePage));
+      return;
+    }
+    const next = Math.min(Math.max(1, Math.floor(n)), tableTotalPages);
+    setTablePage(next);
+    setJumpTablePage(String(next));
+  };
+
   return (
     <div className="container">
       <header className="header">
         <h1>后台录入与维护</h1>
-        <p>可新增/编辑/删除课程转学分映射数据。</p>
+        <p>请选择页面：课程维护 / 公告管理 / 建议箱。</p>
         <div className="headerActions">
           <button
             type="button"
-            className="jumpFeedbackBtn"
+            className={isCoursesPage ? "jumpFeedbackBtn" : "githubBtn"}
+            onClick={() => (window.location.href = "/admin/courses")}
+          >
+            课程维护
+          </button>
+          <button
+            type="button"
+            className={isAnnouncementPage ? "jumpFeedbackBtn" : "githubBtn"}
+            onClick={() => (window.location.href = "/admin/announcement")}
+          >
+            公告管理
+          </button>
+          <button
+            type="button"
+            className={path.toLowerCase().startsWith("/admin/suggestions") ? "jumpFeedbackBtn" : "githubBtn"}
             onClick={() => (window.location.href = "/admin/suggestions")}
           >
-            查看用户建议
+            建议箱
           </button>
         </div>
       </header>
@@ -343,6 +389,7 @@ function Admin() {
         </div>
       </section>
 
+      {isAnnouncementPage && (
       <section className="adminCard">
         <h2 className="adminTitle">公告管理（查询页顶部）</h2>
         <form className="adminForm" onSubmit={saveAnnouncement}>
@@ -412,7 +459,9 @@ function Admin() {
           </div>
         </form>
       </section>
+      )}
 
+      {isCoursesPage && (
       <section className="adminCard">
         <h2 className="adminTitle">{heading}</h2>
 
@@ -529,7 +578,9 @@ function Admin() {
           </div>
         </form>
       </section>
+      )}
 
+      {isCoursesPage && (
       <section className="tableWrap adminTable">
         <h2 className="adminTitle">现有课程映射</h2>
         <div className="filters" style={{ marginBottom: 12 }}>
@@ -632,6 +683,22 @@ function Admin() {
                 ))}
               </select>
             </label>
+            <label className="queryPaginationSize" style={{ gap: 6 }}>
+              <span>跳转</span>
+              <input
+                value={jumpTablePage}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                onChange={(e) => setJumpTablePage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitJumpTablePage();
+                }}
+                onBlur={commitJumpTablePage}
+                style={{ width: 90, padding: "6px 10px" }}
+                aria-label="跳转到页码"
+              />
+              <span style={{ opacity: 0.85 }}>{` / ${tableTotalPages} 页`}</span>
+            </label>
             <div className="queryPaginationNav">
               <button
                 type="button"
@@ -653,6 +720,7 @@ function Admin() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }

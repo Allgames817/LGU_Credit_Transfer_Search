@@ -34,7 +34,6 @@ const UNIVERSITY_REGION = {
   "Seoul National University": "asia",
   "Shanghai Jiao Tong University": "asia",
   "Singapore Management University": "asia",
-  "Sungkyunkwan Univeristy": "asia",
   "Sungkyunkwan University": "asia",
   "The Chinese University of Hong Kong": "asia",
   "University of International Business and Economics": "asia",
@@ -73,14 +72,11 @@ const UNIVERSITY_REGION = {
   "Purdue University": "americas",
   "Stanford University": "americas",
   "The University of British Columbia": "americas",
-  "The University of California, Berkeley": "americas",
   "The University of North Carolina at Chapel Hill": "americas",
   "University of Alberta": "americas",
-  "University of California at Los Angeles": "americas",
   "University of California, Berkeley": "americas",
   "University of California, Davi": "americas",
   "University of California, Irvine": "americas",
-  "University of California, LA": "americas",
   "University of California, Los Angeles": "americas",
   "University of California, San Diego": "americas",
   "University of Michigan": "americas",
@@ -114,6 +110,18 @@ export function getUniversityRegion(universityName, overrides) {
   const raw = overrides && key ? overrides[key] : "";
   if (raw && KNOWN_REGION_IDS.has(raw)) return raw;
   return UNIVERSITY_REGION[key] || "other";
+}
+
+/**
+ * 单条课程所属地区：优先课程自身 partnerRegion（管理员写入），否则按校名查表 + 覆盖。
+ * 用于查询页在已选地区时过滤结果行（与仅缩小院校下拉的逻辑一致）。
+ */
+export function getCourseRegion(course, overrides) {
+  const fromRow = String(course?.partnerRegion || "")
+    .trim()
+    .toLowerCase();
+  if (fromRow && KNOWN_REGION_IDS.has(fromRow)) return fromRow;
+  return getUniversityRegion(course?.partnerUniversity, overrides);
 }
 
 export function filterUniversitiesByRegion(universities, regionId, overrides) {
