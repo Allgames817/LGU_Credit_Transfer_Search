@@ -226,6 +226,15 @@ function Query() {
         <h1>{t.title}</h1>
         <p>{t.subtitle}</p>
         <div className="headerActions">
+          <button
+            type="button"
+            className="jumpFeedbackBtn"
+            onClick={() => {
+              window.location.href = "/submit-transfer";
+            }}
+          >
+            {t.submitTransferBtn}
+          </button>
           <button type="button" className="jumpFeedbackBtn" onClick={goToFeedbackPage}>
             {t.feedbackBtn}
           </button>

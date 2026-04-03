@@ -349,7 +349,7 @@ function Admin() {
     <div className="container">
       <header className="header">
         <h1>后台录入与维护</h1>
-        <p>请选择页面：课程维护 / 公告管理 / 建议箱。</p>
+        <p>请选择页面：课程维护 / 公告管理 / 建议箱 / 转学分审核。</p>
         <div className="headerActions">
           <button
             type="button"
@@ -371,6 +371,13 @@ function Admin() {
             onClick={() => (window.location.href = "/admin/suggestions")}
           >
             建议箱
+          </button>
+          <button
+            type="button"
+            className={path.toLowerCase().startsWith("/admin/reviews") ? "jumpFeedbackBtn" : "githubBtn"}
+            onClick={() => (window.location.href = "/admin/reviews")}
+          >
+            转学分审核
           </button>
         </div>
       </header>

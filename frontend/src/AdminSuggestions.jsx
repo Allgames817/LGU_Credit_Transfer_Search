@@ -153,6 +153,9 @@ function AdminSuggestions() {
           <button type="button" className="jumpFeedbackBtn" onClick={() => (window.location.href = "/admin/suggestions")}>
             建议箱
           </button>
+          <button type="button" className="githubBtn" onClick={() => (window.location.href = "/admin/reviews")}>
+            转学分审核
+          </button>
         </div>
       </header>
 

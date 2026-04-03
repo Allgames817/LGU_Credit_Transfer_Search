@@ -3,6 +3,7 @@ export const translations = {
     title: "港中深海外交流交换课程转学分查询系统",
     subtitle: "支持按地区与合作院校、课程关键词、港中深课程代码等检索课程转换关系。本项目正在开发中，欢迎访问本项目的Github主页点亮Stars或提出建议给我们反馈！",
     feedbackBtn: "我要提建议",
+    submitTransferBtn: "提交转学分案例",
     allRegions: "全部地区",
     allUniversities: "全部合作院校",
     keywordPlaceholder: "关键词（课程名/代码）",
@@ -55,12 +56,36 @@ export const translations = {
       errorEmpty: "请先输入建议内容。",
       errorSubmit: "提交失败",
       successMessage: "建议已提交，感谢反馈！"
+    },
+    submitTransfer: {
+      title: "提交已成功转学分的课程对应",
+      subtitle:
+        "请填写经学院认定的课程信息。提交后由管理员审核，通过后将出现在公开查询中。",
+      backBtn: "返回查询",
+      nameLabel: "称呼（可选）",
+      partnerUniversity: "合作院校（英文全称）",
+      partnerRegion: "院校所在地区",
+      partnerCourseCode: "对方课程代码",
+      partnerCourseName: "对方课程名称",
+      partnerCredits: "对方课程学分",
+      cuhkszCourseCode: "港中深认定课程代码",
+      cuhkszCourseName: "港中深认定课程名称",
+      cuhkszCredits: "港中深课程学分",
+      faculty: "归属学院",
+      facultyPlaceholder: "请选择",
+      remark: "补充说明（可选）",
+      submitBtn: "提交审核",
+      submitting: "提交中...",
+      errorRequired: "请填写所有必填项。",
+      errorSubmit: "提交失败",
+      successMessage: "已提交，请等待管理员审核。"
     }
   },
   en: {
     title: "CUHK-Shenzhen Credit Transfer Search System",
     subtitle: "Search for course transfer relationships by region, partner university, course keywords, and CUHK-Shenzhen course codes. This project is under development. Welcome to visit our Github page to star or give us feedback!",
     feedbackBtn: "Feedback",
+    submitTransferBtn: "Submit transfer case",
     allRegions: "All Regions",
     allUniversities: "All Partner Universities",
     keywordPlaceholder: "Keyword (Course Name/Code)",
@@ -110,6 +135,29 @@ export const translations = {
       errorEmpty: "Please enter your feedback.",
       errorSubmit: "Submission failed",
       successMessage: "Feedback submitted successfully. Thank you!"
+    },
+    submitTransfer: {
+      title: "Submit a verified credit transfer mapping",
+      subtitle:
+        "Please enter the course information as recognized by your School/Faculty. After you submit, an administrator will review it, and if approved it will appear in public search.",
+      backBtn: "Back to Search",
+      nameLabel: "Your name (optional)",
+      partnerUniversity: "Partner university (full English name)",
+      partnerRegion: "Region of partner university",
+      partnerCourseCode: "Partner course code",
+      partnerCourseName: "Partner course title",
+      partnerCredits: "Partner course credits",
+      cuhkszCourseCode: "CUHK-Shenzhen course code",
+      cuhkszCourseName: "CUHK-Shenzhen course title",
+      cuhkszCredits: "CUHK-Shenzhen credits",
+      faculty: "Faculty",
+      facultyPlaceholder: "Select",
+      remark: "Additional notes (optional)",
+      submitBtn: "Submit for review",
+      submitting: "Submitting...",
+      errorRequired: "Please fill in all required fields.",
+      errorSubmit: "Submission failed",
+      successMessage: "Submitted. Please wait for admin review."
     }
   }
 };

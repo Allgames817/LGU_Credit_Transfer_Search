@@ -30,9 +30,14 @@ const ANNOUNCEMENT_FILE_PATH = suggestionsDataRoot
   ? path.join(suggestionsDataRoot, "announcement.json")
   : path.join(__dirname, "data", "announcement.json");
 
+const COURSE_SUBMISSIONS_FILE_PATH = suggestionsDataRoot
+  ? path.join(suggestionsDataRoot, "course_submissions.json")
+  : path.join(__dirname, "data", "course_submissions.json");
+
 /** 所有「读-改-写」串行执行，避免并发提交互相覆盖导致丢数据 */
 let suggestionMutationQueue = Promise.resolve();
 let announcementMutationQueue = Promise.resolve();
+let courseSubmissionMutationQueue = Promise.resolve();
 
 function enqueueSuggestionMutation(fn) {
   const run = suggestionMutationQueue.then(() => fn());
@@ -46,6 +51,14 @@ function enqueueAnnouncementMutation(fn) {
   const run = announcementMutationQueue.then(() => fn());
   announcementMutationQueue = run.catch((e) => {
     console.error("[announcement] mutation error", e && e.message ? e.message : e);
+  }).then(() => {});
+  return run;
+}
+
+function enqueueCourseSubmissionMutation(fn) {
+  const run = courseSubmissionMutationQueue.then(() => fn());
+  courseSubmissionMutationQueue = run.catch((e) => {
+    console.error("[course-submissions] mutation error", e && e.message ? e.message : e);
   }).then(() => {});
   return run;
 }
@@ -131,6 +144,47 @@ const saveSuggestionsAtomic = async (suggestions) => {
   await fs.writeFile(tmp, data, "utf8");
   await fs.rename(tmp, SUGGESTIONS_FILE_PATH);
 };
+
+const clipStr = (value, max) => String(value ?? "").trim().slice(0, max);
+
+const readCourseSubmissionsFromFile = async () => {
+  try {
+    const raw = (await fs.readFile(COURSE_SUBMISSIONS_FILE_PATH, "utf8")).replace(/^\uFEFF/, "");
+    if (!String(raw).trim()) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (err) {
+    if (err && err.code === "ENOENT") return [];
+    if (err instanceof SyntaxError) {
+      try {
+        const backup = `${COURSE_SUBMISSIONS_FILE_PATH}.corrupt-${Date.now()}`;
+        await fs.copyFile(COURSE_SUBMISSIONS_FILE_PATH, backup);
+        console.error("[course-submissions] JSON 损坏，已备份到", backup);
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        await fs.unlink(COURSE_SUBMISSIONS_FILE_PATH);
+      } catch (_) {
+        /* ignore */
+      }
+      return [];
+    }
+    throw err;
+  }
+};
+
+const saveCourseSubmissionsAtomic = async (rows) => {
+  const dir = path.dirname(COURSE_SUBMISSIONS_FILE_PATH);
+  await fs.mkdir(dir, { recursive: true });
+  const data = `${JSON.stringify(rows, null, 2)}\n`;
+  const tmp = path.join(dir, `.course_submissions.${process.pid}.${Date.now()}.tmp`);
+  await fs.writeFile(tmp, data, "utf8");
+  await fs.rename(tmp, COURSE_SUBMISSIONS_FILE_PATH);
+};
+
+const nextCourseSubmissionId = (rows) =>
+  rows.reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
 
 const DEFAULT_ANNOUNCEMENT = {
   enabled: true,
@@ -363,6 +417,228 @@ app.delete("/api/suggestions", requireAdmin, async (_, res) => {
   }
 });
 
+/** 用户自助提交「已成功转学分」课程对应，待管理员审核后写入 courses */
+app.post("/api/course-submissions", async (req, res) => {
+  const b = req.body || {};
+  const partnerUniversity = clipStr(b.partnerUniversity, 220);
+  const partnerCourseCode = clipStr(b.partnerCourseCode, 120);
+  const partnerCourseName = clipStr(b.partnerCourseName, 500);
+  const cuhkszCourseCode = clipStr(b.cuhkszCourseCode, 120);
+  const cuhkszCourseName = clipStr(b.cuhkszCourseName, 500);
+  const faculty = clipStr(b.faculty, 24);
+  const submitterName = clipStr(b.submitterName, 100);
+  const remark = clipStr(b.remark, 2000);
+
+  if (!partnerUniversity || !partnerCourseCode || !partnerCourseName || !cuhkszCourseCode || !cuhkszCourseName) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+  const partnerRegionNorm = normalizePartnerRegion(b.partnerRegion);
+  if (!partnerRegionNorm) {
+    return res.status(400).json({ message: "Invalid or missing partnerRegion" });
+  }
+
+  const partnerCredits = Number(b.partnerCredits);
+  const cuhkszCredits = Number(b.cuhkszCredits);
+  if (!Number.isFinite(partnerCredits) || partnerCredits < 0 || partnerCredits > 40) {
+    return res.status(400).json({ message: "Invalid partnerCredits" });
+  }
+  if (!Number.isFinite(cuhkszCredits) || cuhkszCredits < 0 || cuhkszCredits > 40) {
+    return res.status(400).json({ message: "Invalid cuhkszCredits" });
+  }
+
+  try {
+    const row = await enqueueCourseSubmissionMutation(async () => {
+      const list = await readCourseSubmissionsFromFile();
+      const entry = {
+        id: nextCourseSubmissionId(list),
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        submitterName: submitterName || "匿名",
+        partnerUniversity,
+        partnerRegion: partnerRegionNorm,
+        partnerCourseCode,
+        partnerCourseName,
+        partnerCredits,
+        cuhkszCourseCode,
+        cuhkszCourseName,
+        cuhkszCredits,
+        faculty,
+        remark
+      };
+      list.push(entry);
+      await saveCourseSubmissionsAtomic(list);
+      return entry;
+    });
+    return res.status(201).json({ ok: true, data: row });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to save submission" });
+  }
+});
+
+app.get("/api/course-submissions", requireAdmin, async (req, res) => {
+  try {
+    const list = await readCourseSubmissionsFromFile();
+    const st = String(req.query.status || "").trim().toLowerCase();
+    const filtered =
+      st && ["pending", "approved", "rejected"].includes(st)
+        ? list.filter((x) => String(x.status) === st)
+        : list;
+    res.json({
+      total: filtered.length,
+      data: filtered.slice().sort((a, b) => Number(b.id) - Number(a.id))
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to load course submissions" });
+  }
+});
+
+app.post("/api/course-submissions/:id/approve", requireAdmin, async (req, res) => {
+  const sid = Number(req.params.id);
+  if (!Number.isFinite(sid)) {
+    return res.status(400).json({ message: "Invalid id" });
+  }
+
+  const body = req.body || {};
+  const pick = (key, sub, max) =>
+    Object.prototype.hasOwnProperty.call(body, key) ? clipStr(body[key], max) : clipStr(sub[key], max);
+
+  try {
+    const result = await enqueueCourseSubmissionMutation(async () => {
+      const list = await readCourseSubmissionsFromFile();
+      const idx = list.findIndex((x) => Number(x.id) === sid);
+      if (idx === -1) return { err: 404, message: "Submission not found" };
+      const sub = list[idx];
+      if (sub.status !== "pending") {
+        return { err: 400, message: "Only pending submissions can be approved" };
+      }
+
+      const partnerUniversity = pick("partnerUniversity", sub, 220);
+      const partnerCourseCode = pick("partnerCourseCode", sub, 120);
+      const partnerCourseName = pick("partnerCourseName", sub, 500);
+      const cuhkszCourseCode = pick("cuhkszCourseCode", sub, 120);
+      const cuhkszCourseName = pick("cuhkszCourseName", sub, 500);
+      const faculty = pick("faculty", sub, 24);
+      if (!partnerUniversity || !partnerCourseCode || !partnerCourseName || !cuhkszCourseCode || !cuhkszCourseName) {
+        return { err: 400, message: "Missing required course fields" };
+      }
+
+      const regionSource = Object.prototype.hasOwnProperty.call(body, "partnerRegion")
+        ? body.partnerRegion
+        : sub.partnerRegion;
+      const partnerRegionNorm = normalizePartnerRegion(regionSource);
+      if (!partnerRegionNorm) {
+        return { err: 400, message: "Invalid partnerRegion" };
+      }
+
+      let partnerCredits = Object.prototype.hasOwnProperty.call(body, "partnerCredits")
+        ? Number(body.partnerCredits)
+        : Number(sub.partnerCredits);
+      let cuhkszCredits = Object.prototype.hasOwnProperty.call(body, "cuhkszCredits")
+        ? Number(body.cuhkszCredits)
+        : Number(sub.cuhkszCredits);
+      if (!Number.isFinite(partnerCredits) || partnerCredits < 0) partnerCredits = 0;
+      if (!Number.isFinite(cuhkszCredits) || cuhkszCredits < 0) cuhkszCredits = 0;
+
+      const nextCourseId = courses.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
+      const newCourse = {
+        id: nextCourseId,
+        partnerUniversity,
+        partnerCourseCode,
+        partnerCourseName,
+        partnerCredits,
+        cuhkszCourseCode,
+        cuhkszCourseName,
+        cuhkszCredits,
+        faculty,
+        status: "approved",
+        partnerRegion: partnerRegionNorm
+      };
+
+      courses.push(newCourse);
+      try {
+        await saveCoursesToFile();
+      } catch (e) {
+        courses.pop();
+        throw e;
+      }
+
+      list[idx] = {
+        ...sub,
+        status: "approved",
+        reviewedAt: new Date().toISOString(),
+        approvedCourseId: nextCourseId
+      };
+      await saveCourseSubmissionsAtomic(list);
+      return { ok: true, submission: list[idx], course: newCourse };
+    });
+
+    if (result.err) {
+      return res.status(result.err).json({ message: result.message });
+    }
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to approve submission" });
+  }
+});
+
+app.post("/api/course-submissions/:id/reject", requireAdmin, async (req, res) => {
+  const sid = Number(req.params.id);
+  if (!Number.isFinite(sid)) {
+    return res.status(400).json({ message: "Invalid id" });
+  }
+  const reason = clipStr(req.body?.reason, 500);
+
+  try {
+    const result = await enqueueCourseSubmissionMutation(async () => {
+      const list = await readCourseSubmissionsFromFile();
+      const idx = list.findIndex((x) => Number(x.id) === sid);
+      if (idx === -1) return { err: 404, message: "Submission not found" };
+      const sub = list[idx];
+      if (sub.status !== "pending") {
+        return { err: 400, message: "Only pending submissions can be rejected" };
+      }
+      list[idx] = {
+        ...sub,
+        status: "rejected",
+        reviewedAt: new Date().toISOString(),
+        rejectReason: reason
+      };
+      await saveCourseSubmissionsAtomic(list);
+      return { ok: true, data: list[idx] };
+    });
+    if (result.err) {
+      return res.status(result.err).json({ message: result.message });
+    }
+    return res.json(result);
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to reject submission" });
+  }
+});
+
+app.delete("/api/course-submissions/:id", requireAdmin, async (req, res) => {
+  const sid = Number(req.params.id);
+  if (!Number.isFinite(sid)) {
+    return res.status(400).json({ message: "Invalid id" });
+  }
+
+  try {
+    const result = await enqueueCourseSubmissionMutation(async () => {
+      const list = await readCourseSubmissionsFromFile();
+      const idx = list.findIndex((x) => Number(x.id) === sid);
+      if (idx === -1) return { err: 404 };
+      list.splice(idx, 1);
+      await saveCourseSubmissionsAtomic(list);
+      return { ok: true };
+    });
+    if (result.err) {
+      return res.status(404).json({ message: "Submission not found" });
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to delete submission" });
+  }
+});
+
 app.post("/api/courses", requireAdmin, async (req, res) => {
   const payload = req.body;
   const requiredFields = [
@@ -510,7 +786,8 @@ if (serveFrontend) {
       health: "/api/health",
       courses: "/api/courses",
       universities: "/api/universities",
-      suggestions: "/api/suggestions"
+      suggestions: "/api/suggestions",
+      courseSubmissions: "/api/course-submissions"
     });
   });
 }
@@ -523,4 +800,5 @@ app.listen(PORT, "0.0.0.0", () => {
         ? ` (dir from ${String(process.env.SUGGESTIONS_DATA_DIR || "").trim() ? "SUGGESTIONS_DATA_DIR" : "RAILWAY_VOLUME_MOUNT_PATH"})`
         : " (bundled backend/src/data)")
   );
+  console.log(`[course-submissions] storage file: ${COURSE_SUBMISSIONS_FILE_PATH}`);
 });

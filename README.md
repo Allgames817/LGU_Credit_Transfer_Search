@@ -12,8 +12,9 @@
 - 地区筛选：按亚洲、欧洲、美洲、大洋洲等地区快速定位
 - 院校筛选：支持 80+ 所合作院校
 - 关键词搜索：课程名称、课程代码智能匹配
-- 学院分类：SDS、SSE、SME等学院分类
+- 学院分类：SDS、SSE、SME 等学院分类
 - 课程代码查询：精确匹配港中深课程代码
+- 分页与跳页：列表分页，支持输入页码跳转
 
 ### 用户体验
 - 深色模式：深色主题，平滑过渡动画
@@ -21,9 +22,13 @@
 - 响应式设计：适配桌面和移动设备
 - 实时搜索：输入即搜，无需点击按钮
 
+### 用户自助
+- **提交转学分映射**：访问 `/submit-transfer`，填写合作校与港中深课程等信息；数据写入待审核队列，由管理员在审核页处理
+
 ### 管理功能
-- 课程管理：新增、编辑、删除课程映射记录
-- 建议管理：查看、筛选、导出用户反馈
+- **课程维护**（`/admin/courses`）：新增、编辑、删除课程映射记录；分页与跳页；可选维护首页公告（同页或 `/admin/announcement`）
+- **转学分审核**（`/admin/reviews`）：查看待审与历史提交；**通过**则写入 `courses.js`；**拒绝**仅更新状态；**删除**从审核列表移除该条记录（**不会**自动撤销已写入课程库的数据，需仍在课程维护中手动删课）
+- **建议管理**（`/admin/suggestions`）：查看、筛选、导出用户反馈
 - 权限控制：管理员令牌保护敏感操作
 - 数据导出：支持 CSV 格式导出
 
@@ -37,17 +42,20 @@
 ### 安装步骤
 
 1. 克隆项目
+
 ```bash
 git clone https://github.com/Allgames817/LGU_Credit_Transfer_Search.git
 cd LGU_Credit_Transfer_Search
 ```
 
 2. 安装依赖
+
 ```bash
 npm run install:all
 ```
 
 3. 启动开发服务器
+
 ```bash
 npm run dev
 ```
@@ -77,22 +85,39 @@ LGU_Credit_Transfer_Search/
 ├── backend/                    # 后端代码
 │   ├── src/
 │   │   ├── data/
-│   │   │   ├── courses.js     # 课程数据
-│   │   │   └── suggestions.json # 用户建议数据
-│   │   └── server.js          # Express 服务器
+│   │   │   ├── courses.js              # 课程映射（主数据）
+│   │   │   ├── suggestions.json        # 用户建议
+│   │   │   ├── announcement.json       # 首页公告
+│   │   │   └── course_submissions.json # 用户提交的转学分待审队列
+│   │   └── server.js                   # Express 服务
 │   └── package.json
 ├── frontend/                   # 前端代码
 │   ├── src/
-│   │   ├── Admin.jsx          # 管理员页面
-│   │   ├── AdminSuggestions.jsx # 建议管理页面
-│   │   ├── Query.jsx          # 查询页面
-│   │   ├── Feedback.jsx       # 用户反馈页面
-│   │   ├── translations.js    # 多语言配置
-│   │   ├── universityRegions.js # 地区映射
-│   │   └── styles.css         # 全局样式
+│   │   ├── Query.jsx                   # 查询页
+│   │   ├── SubmitTransfer.jsx          # 自助提交转学分
+│   │   ├── Admin.jsx                   # 课程维护 / 公告（路由 /admin/courses、/admin/announcement）
+│   │   ├── AdminCourseReviews.jsx      # 转学分审核 /admin/reviews
+│   │   ├── AdminSuggestions.jsx        # 建议管理
+│   │   ├── Feedback.jsx                # 用户反馈
+│   │   ├── translations.js
+│   │   ├── universityRegions.js        # 地区与校名映射
+│   │   └── styles.css
 │   └── package.json
 └── package.json               # 根配置文件
 ```
+
+## 前端路由一览
+
+| 路径 | 说明 |
+|------|------|
+| `/` | 公开查询 |
+| `/submit-transfer` | 自助提交转学分（公开） |
+| `/feedback` | 用户反馈（公开） |
+| `/admin` | 重定向至 `/admin/courses` |
+| `/admin/courses` | 课程维护（需令牌） |
+| `/admin/announcement` | 公告编辑（需令牌） |
+| `/admin/reviews` | 转学分提交审核（需令牌） |
+| `/admin/suggestions` | 建议管理（需令牌） |
 
 ## 后端 API
 
@@ -105,18 +130,25 @@ LGU_Credit_Transfer_Search/
 | GET | `/api/university-regions` | 课程中显式 `partnerRegion` 的校名→地区（供前台筛选） |
 | GET | `/api/courses` | 查询课程（支持多参数筛选） |
 | GET | `/api/courses/:id` | 单条课程 |
+| GET | `/api/announcement` | 首页公告 |
 | POST | `/api/suggestions` | 提交用户建议 |
+| POST | `/api/course-submissions` | 提交一条转学分映射（进入审核队列） |
 
 ### 管理员接口（需要令牌）
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
+| PUT | `/api/announcement` | 保存公告 |
 | POST | `/api/courses` | 新增课程映射 |
 | PUT | `/api/courses/:id` | 编辑课程映射 |
 | DELETE | `/api/courses/:id` | 删除课程映射 |
 | GET | `/api/suggestions` | 查看所有建议 |
 | DELETE | `/api/suggestions/:id` | 删除单条建议 |
 | DELETE | `/api/suggestions` | 清空所有建议 |
+| GET | `/api/course-submissions` | 列出所有转学分提交 |
+| POST | `/api/course-submissions/:id/approve` | 通过审核并写入课程 |
+| POST | `/api/course-submissions/:id/reject` | 拒绝（保留记录，更新状态） |
+| DELETE | `/api/course-submissions/:id` | 从队列中删除该条记录 |
 
 ### 查询参数
 
@@ -125,10 +157,11 @@ LGU_Credit_Transfer_Search/
 - `university` - 合作院校名称
 - `keyword` - 课程关键词（匹配课程名称或代码）
 - `cuhkszCourseCode` - 港中深课程代码
-- `faculty` - 归属学院（SDS/SSE/SME等）
+- `faculty` - 归属学院（SDS/SSE/SME 等）
 - `status` - 状态（approved/pending）
 
 示例：
+
 ```bash
 GET /api/courses?university=Stanford%20University&faculty=SSE
 ```
@@ -156,7 +189,7 @@ export ADMIN_TOKEN=your-secret-token
 
 ### 添加课程数据
 
-- **推荐**：在 **`/admin`** 录入；保存后会写回 `backend/src/data/courses.js`。可选字段 **`partnerRegion`**（`asia` / `europe` / `americas` / `oceania` / `other`）会一并写入，供前台地区筛选覆盖 `universityRegions.js` 内置表。
+- **推荐**：在 **`/admin/courses`** 录入；保存后会写回 `backend/src/data/courses.js`。可选字段 **`partnerRegion`**（`asia` / `europe` / `americas` / `oceania` / `other`）会一并写入，供前台地区筛选并补充 `universityRegions.js` 内置表。
 - **手工**：直接编辑 `courses.js`，单条记录示例：
 
 ```javascript
@@ -176,23 +209,30 @@ export ADMIN_TOKEN=your-secret-token
 
 ### 地区映射维护
 
-新增院校时，需要在 `frontend/src/universityRegions.js` 中添加地区映射：
-
-```javascript
-const UNIVERSITY_REGION = {
-  "Stanford University": "americas",
-  "University of Oxford": "europe",
-  // 添加更多...
-};
-```
+新增院校时，可在 `frontend/src/universityRegions.js` 中补充地区映射；若已在后台为课程填写 `partnerRegion`，也会参与地区筛选。
 
 支持的地区：`asia`、`europe`、`americas`、`oceania`、`other`
 
+### 建议、公告与转学分提交（JSON 文件路径）
+
+以下文件默认在 `backend/src/data/`：
+
+- `suggestions.json`
+- `announcement.json`
+- `course_submissions.json`
+
+若设置环境变量 **`SUGGESTIONS_DATA_DIR`** 或云平台注入的 **`RAILWAY_VOLUME_MOUNT_PATH`**，则上述三个文件会写到**同一目录**下（与 `suggestions.json` 规则一致），便于挂卷持久化。
+
+实际路径以启动日志为准：
+
+- `[suggestions] storage file: ...`
+- `[course-submissions] storage file: ...`
+
+写入方式：串行队列 + 原子写入（临时文件再替换），减少并发覆盖。
+
 ### 建议数据管理
 
-- **文件路径**：默认 `backend/src/data/suggestions.json`；若设置环境变量 **`SUGGESTIONS_DATA_DIR`** 或 **`RAILWAY_VOLUME_MOUNT_PATH`**（部分云平台挂卷时注入），则在该目录下读写 `suggestions.json`。实际路径以启动日志 **`[suggestions] storage file: ...`** 为准。
-- **写入方式**：串行队列 + 原子写入（临时文件再替换），`id` 递增，减少并发覆盖。
-- **管理**：网页 `/admin/suggestions`（令牌）支持筛选、删除、导出 CSV；或手动将对应 `suggestions.json` 改为 `[]`。
+- **管理**：网页 `/admin/suggestions`（令牌）支持筛选、删除、导出 CSV；或手动将 `suggestions.json` 改为 `[]`。
 
 ## 多语言支持
 
@@ -222,6 +262,8 @@ npm run build
 ```bash
 npm run start:prod
 ```
+
+生产环境请设置 **`ADMIN_TOKEN`**，并视需要设置 **`SUGGESTIONS_DATA_DIR`** 或挂卷路径，保证 JSON 数据与课程文件可写、可持久化。
 
 ## 贡献指南
 
