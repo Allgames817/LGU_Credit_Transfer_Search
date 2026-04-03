@@ -1,5 +1,2 @@
 # 由 npm run build 生成并复制到此后端目录，勿提交
 backend/public/
-
-# 部署平台配置仅保留在本地，不纳入版本库
-railway.toml
